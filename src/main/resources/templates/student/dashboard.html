@@ -2,6 +2,10 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Student Dashboard - Exam Review System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -10,79 +14,133 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
         }
         
+        /* Animated background */
+        .bg-shape {
+            position: fixed;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .bg-shape-1 {
+            width: 500px;
+            height: 500px;
+            top: -200px;
+            right: -200px;
+            animation: float 25s infinite;
+        }
+        
+        .bg-shape-2 {
+            width: 300px;
+            height: 300px;
+            bottom: -100px;
+            left: -100px;
+            animation: float 20s infinite reverse;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(10deg); }
+        }
+        
         .header {
             background: white;
-            color: #333;
-            padding: 20px;
+            color: #1e293b;
+            padding: 28px 20px;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            position: relative;
+            z-index: 1;
         }
         
         .header h1 {
-            font-size: 28px;
-            margin-bottom: 5px;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .header p {
-            color: #666;
+            color: #64748b;
             font-size: 14px;
+            font-weight: 500;
         }
         
         .nav {
             background: white;
-            overflow: hidden;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin: 20px auto 0;
+            max-width: 1200px;
+            border-radius: 60px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
+            gap: 5px;
+            padding: 8px 20px;
+            position: relative;
+            z-index: 1;
         }
         
         .nav a {
-            float: left;
-            color: #333;
+            color: #475569;
             text-align: center;
-            padding: 14px 20px;
+            padding: 12px 24px;
             text-decoration: none;
-            font-size: 16px;
+            font-size: 15px;
+            font-weight: 500;
             transition: all 0.3s ease;
             cursor: pointer;
+            border-radius: 40px;
+            letter-spacing: 0.3px;
         }
         
         .nav a:hover {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            transform: translateY(-2px);
         }
         
         .nav a.active {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
         
         .container {
-            max-width: 1200px;
-            margin: auto;
-            padding: 20px;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            position: relative;
+            z-index: 1;
         }
         
         .section {
             background: white;
-            margin: 20px 0;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            animation: fadeIn 0.5s ease;
+            margin: 24px 0;
+            padding: 32px;
+            border-radius: 24px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.15);
+            animation: fadeInUp 0.5s ease-out;
+            transition: transform 0.2s ease;
         }
         
-        @keyframes fadeIn {
+        .section:hover {
+            transform: translateY(-2px);
+        }
+        
+        @keyframes fadeInUp {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(30px);
             }
             to {
                 opacity: 1;
@@ -91,146 +149,207 @@
         }
         
         .section h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #eee;
+            color: #1e293b;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #e2e8f0;
+            position: relative;
+        }
+        
+        .section h2:after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 3px;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-        }
-        
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
+            margin-top: 20px;
+            border-radius: 12px;
+            overflow: hidden;
         }
         
         th {
-            background: #667eea;
-            color: white;
+            background: #f8fafc;
+            color: #1e293b;
             font-weight: 600;
+            padding: 14px 16px;
+            border-bottom: 2px solid #e2e8f0;
+            font-size: 14px;
+        }
+        
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+            font-size: 14px;
         }
         
         tr:hover {
-            background: #f5f5f5;
+            background: #f8fafc;
         }
         
         button {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 8px 16px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 5px;
+            border-radius: 40px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 500;
             transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.3px;
         }
         
         button:hover {
-            background: #5a67d8;
             transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
         }
         
         .status {
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 4px 12px;
+            border-radius: 20px;
             font-size: 12px;
-            font-weight: bold;
+            font-weight: 600;
             display: inline-block;
+            letter-spacing: 0.3px;
         }
         
         .status-pending {
-            background: #f39c12;
-            color: white;
+            background: #fef3c7;
+            color: #d97706;
         }
         
         .status-success {
-            background: #27ae60;
-            color: white;
+            background: #d1fae5;
+            color: #059669;
         }
         
         .status-completed {
-            background: #3498db;
-            color: white;
+            background: #dbeafe;
+            color: #3b82f6;
         }
         
         .status-failed {
-            background: #e74c3c;
-            color: white;
+            background: #fee2e2;
+            color: #dc2626;
         }
         
         .status-in-progress {
-            background: #f39c12;
-            color: white;
+            background: #fed7aa;
+            color: #ea580c;
         }
         
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
         
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 14px;
         }
         
         select {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
             font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+            background: white;
+            cursor: pointer;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
         .message {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 5px;
+            margin-top: 20px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
             display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .message.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #059669;
             display: block;
         }
         
         .message.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #dc2626;
             display: block;
         }
         
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #667eea;
-        }
-        
-        .btn-back {
-            display: inline-block;
-            margin-top: 20px;
-            background: #95a5a6;
-        }
-        
         .fee-amount {
-            color: #27ae60;
-            font-weight: bold;
-            font-size: 18px;
+            color: #059669;
+            font-weight: 700;
+            font-size: 20px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 12px;
+            color: #cbd5e1;
         }
         
         @media (max-width: 768px) {
+            .nav {
+                border-radius: 0;
+                padding: 8px;
+            }
+            
             .nav a {
-                float: none;
-                display: block;
-                text-align: center;
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+            
+            .section {
+                padding: 20px;
             }
             
             table {
@@ -238,15 +357,22 @@
             }
             
             th, td {
-                padding: 8px;
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
             }
         }
     </style>
 </head>
 <body>
+    <div class="bg-shape bg-shape-1"></div>
+    <div class="bg-shape bg-shape-2"></div>
+    
     <div class="header">
         <h1>Student Dashboard</h1>
-        <p>Welcome to Online Examination Review and Revaluation Management System</p>
+        <p>Online Examination Review and Revaluation Management System</p>
     </div>
     
     <div class="nav">
@@ -254,7 +380,7 @@
         <a onclick="showSection('apply')">Apply for Review</a>
         <a onclick="showSection('status')">Review Status</a>
         <a onclick="showSection('revaluation')">Apply for Revaluation</a>
-        <a href="/login" style="float: right;">Logout</a>
+        <a href="/login" style="margin-left: auto;">Logout</a>
     </div>
 
     <div class="container">
@@ -267,10 +393,10 @@
         <!-- Apply for Review Section -->
         <div id="apply" class="section" style="display: none;">
             <h2>Apply for Paper Review</h2>
-            <p style="margin-bottom: 20px; color: #666;">Review Fee: <span class="fee-amount">₹500</span> (per paper)</p>
+            <p style="margin-bottom: 20px; color: #64748b;">Review Fee: <span class="fee-amount">₹500</span> per paper</p>
             <div id="applyForm">
                 <div class="form-group">
-                    <label>Select Answer Script for Review:</label>
+                    <label>Select Answer Script for Review</label>
                     <select id="scriptSelect"></select>
                 </div>
                 <button onclick="applyForReview()">Apply for Review</button>
@@ -287,10 +413,10 @@
         <!-- Apply for Revaluation Section -->
         <div id="revaluation" class="section" style="display: none;">
             <h2>Apply for Full Revaluation</h2>
-            <p style="margin-bottom: 20px; color: #666;">Revaluation Fee: <span class="fee-amount">₹1500</span> (per paper)</p>
+            <p style="margin-bottom: 20px; color: #64748b;">Revaluation Fee: <span class="fee-amount">₹1500</span> per paper</p>
             <div id="revaluationForm">
                 <div class="form-group">
-                    <label>Select Answer Script for Revaluation:</label>
+                    <label>Select Answer Script for Revaluation</label>
                     <select id="revaluationScriptSelect"></select>
                 </div>
                 <button onclick="applyForRevaluation()">Apply for Revaluation</button>
@@ -330,11 +456,11 @@
                 const resultsList = document.getElementById('resultsList');
                 
                 if (results.length === 0) {
-                    resultsList.innerHTML = '<p style="text-align: center; padding: 20px;">No exam results found.</p>';
+                    resultsList.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No exam results found</p></div>';
                     return;
                 }
                 
-                let html = '<table>\n<thead>\n<tr>\n<th>Script ID</th>\n<th>Subject</th>\n<th>Exam Date</th>\n<th>Marks Obtained</th>\n<th>Status</th>\n</tr>\n</thead>\n<tbody>';
+                let html = '<table><thead><tr><th>Script ID</th><th>Subject</th><th>Exam Date</th><th>Marks Obtained</th><th>Status</th></tr></thead><tbody>';
                 results.forEach(script => {
                     let statusClass = '';
                     if (script.status === 'EVALUATED' || script.status === 'RESULTS_PUBLISHED') statusClass = 'status-success';
@@ -342,18 +468,23 @@
                     else if (script.status === 'REVIEW_COMPLETED') statusClass = 'status-completed';
                     else statusClass = 'status-pending';
                     
+                    let statusText = script.status || 'PENDING';
+                    if (statusText === 'RESULTS_PUBLISHED') statusText = 'Published';
+                    else if (statusText === 'REVIEW_REQUESTED') statusText = 'Review Requested';
+                    else if (statusText === 'REVIEW_COMPLETED') statusText = 'Review Completed';
+                    
                     html += `<tr>
                         <td>#${script.scriptId}</td>
                         <td>${script.exam?.subject || 'N/A'}</td>
                         <td>${script.exam?.examDate || 'N/A'}</td>
                         <td><strong>${script.totalMarks || 'Not Evaluated'}</strong></td>
-                        <td><span class="status ${statusClass}">${script.status || 'PENDING'}</span></td>
+                        <td><span class="status ${statusClass}">${statusText}</span></td>
                     </tr>`;
                 });
-                html += '</tbody>\n</table>';
+                html += '</tbody></table>';
                 resultsList.innerHTML = html;
             } catch (error) {
-                document.getElementById('resultsList').innerHTML = '<p class="message error">Error loading results. Please try again.</p>';
+                document.getElementById('resultsList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading results. Please try again.</p></div>';
             }
         }
         
@@ -422,28 +553,40 @@
                 const statusList = document.getElementById('reviewStatusList');
                 
                 if (requests.length === 0) {
-                    statusList.innerHTML = '<p style="text-align: center; padding: 20px;">No review requests found.</p>';
+                    statusList.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>No review requests found</p></div>';
                     return;
                 }
                 
-                let html = '<table>\n<thead>\n<tr>\n<th>Request ID</th>\n<th>Script ID</th>\n<th>Subject</th>\n<th>Fee</th>\n<th>Status</th>\n<th>Action</th>\n</tr>\n</thead>\n<tbody>';
+                let html = '<table><thead><tr><th>Request ID</th><th>Script ID</th><th>Subject</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead><tbody>';
                 requests.forEach(request => {
                     let statusClass = '';
-                    if (request.reviewStatus === 'PAYMENT_SUCCESS') statusClass = 'status-success';
-                    else if (request.reviewStatus === 'PAYMENT_PENDING') statusClass = 'status-pending';
-                    else if (request.reviewStatus === 'IN_PROGRESS') statusClass = 'status-in-progress';
-                    else if (request.reviewStatus === 'COMPLETED') statusClass = 'status-completed';
-                    else statusClass = 'status-pending';
+                    let statusText = request.reviewStatus || 'PENDING';
+                    
+                    if (statusText === 'PAYMENT_SUCCESS') {
+                        statusClass = 'status-success';
+                        statusText = 'Payment Success';
+                    } else if (statusText === 'PAYMENT_PENDING') {
+                        statusClass = 'status-pending';
+                        statusText = 'Payment Pending';
+                    } else if (statusText === 'IN_PROGRESS') {
+                        statusClass = 'status-in-progress';
+                        statusText = 'In Progress';
+                    } else if (statusText === 'COMPLETED') {
+                        statusClass = 'status-completed';
+                        statusText = 'Completed';
+                    } else {
+                        statusClass = 'status-pending';
+                    }
                     
                     let action = '';
                     if (request.reviewStatus === 'PAYMENT_PENDING') {
                         action = `<button onclick="payForReview(${request.reviewId})">Pay Now</button>`;
                     } else if (request.reviewStatus === 'PAYMENT_SUCCESS') {
-                        action = '<span style="color: green;">✓ Paid - Awaiting Processing</span>';
+                        action = '<span style="color: #059669;">Paid - Awaiting Processing</span>';
                     } else if (request.reviewStatus === 'IN_PROGRESS') {
-                        action = '<span style="color: orange;">In Progress</span>';
+                        action = '<span style="color: #ea580c;">In Progress</span>';
                     } else if (request.reviewStatus === 'COMPLETED') {
-                        action = '<span style="color: green;">✓ Completed</span>';
+                        action = '<span style="color: #059669;">Completed</span>';
                     }
                     
                     html += `<tr>
@@ -451,14 +594,14 @@
                         <td>#${request.answerScript?.scriptId || 'N/A'}</td>
                         <td>${request.answerScript?.exam?.subject || 'N/A'}</td>
                         <td>₹${request.reviewFee}</td>
-                        <td><span class="status ${statusClass}">${request.reviewStatus}</span></td>
+                        <td><span class="status ${statusClass}">${statusText}</span></td>
                         <td>${action}</td>
                     </tr>`;
                 });
-                html += '</tbody>\n</table>';
+                html += '</tbody></table>';
                 statusList.innerHTML = html;
             } catch (error) {
-                document.getElementById('reviewStatusList').innerHTML = '<p class="message error">Error loading review status</p>';
+                document.getElementById('reviewStatusList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading review status</p></div>';
             }
         }
         
@@ -507,7 +650,9 @@
                 const request = await response.json();
                 
                 if (response.ok) {
-                    showMessage('revaluationMessage', `Revaluation request created! Fee: ₹1500. Status: ${request.revaluationStatus}. You will be notified once processed.`, 'success');
+                    let statusText = request.revaluationStatus || 'PENDING';
+                    if (statusText === 'PAYMENT_PENDING') statusText = 'Payment Pending';
+                    showMessage('revaluationMessage', `Revaluation request created! Fee: ₹1500. Status: ${statusText}. You will be notified once processed.`, 'success');
                     setTimeout(() => {
                         loadRevaluationScripts();
                     }, 2000);
@@ -528,7 +673,6 @@
             }, 5000);
         }
         
-        // Load initial section
         loadResults();
     </script>
 </body>
