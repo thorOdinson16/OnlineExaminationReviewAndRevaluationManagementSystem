@@ -13,7 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/student")
@@ -34,14 +36,31 @@ public class StudentController {
     @Autowired
     private ExamReviewFacade examReviewFacade;
 
-    // Apply for paper review
+    // Apply for paper review - Using Facade
     @PostMapping("/review/apply")
-    public ResponseEntity<ReviewRequest> applyForReview(@RequestBody ReviewRequest request) {
-        return ResponseEntity.ok(reviewService.applyForReview(request));
+    public ResponseEntity<Map<String, Object>> applyForReview(@RequestBody Map<String, Object> request) {
+        try {
+            Long studentId = ((Number) request.get("studentId")).longValue();
+            Long scriptId = ((Number) ((Map) request.get("answerScript")).get("scriptId")).longValue();
+            
+            Map<String, Object> result = examReviewFacade.applyAndPay(studentId, scriptId);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            error.put("message", "Failed to apply for review");
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    // Get specific review by ID
+    @GetMapping("/review/{reviewId}")
+    public ResponseEntity<ReviewRequest> getReviewById(@PathVariable Long reviewId) {
+        return ResponseEntity.ok(reviewService.getReviewById(reviewId));
     }
 
     // View all review requests by student
-    @GetMapping("/review/{studentId}")
+    @GetMapping("/review/student/{studentId}")
     public ResponseEntity<List<ReviewRequest>> getMyReviews(@PathVariable Long studentId) {
         return ResponseEntity.ok(reviewService.getReviewsByStudent(studentId));
     }
@@ -54,13 +73,13 @@ public class StudentController {
         return ResponseEntity.ok(revaluationService.applyForRevaluation(scriptId, studentId));
     }
 
-    // NEW: Get student exam results
+    // Get student exam results
     @GetMapping("/results/{studentId}")
     public ResponseEntity<List<AnswerScript>> getStudentResults(@PathVariable Long studentId) {
         return ResponseEntity.ok(answerScriptRepository.findByStudentUserId(studentId));
     }
 
-    // NEW: Pay for review request
+    // Pay for review request
     @PostMapping("/review/{reviewId}/pay")
     public ResponseEntity<ReviewRequest> payForReview(@PathVariable Long reviewId) {
         ReviewRequest updatedRequest = reviewService.processPaymentForReview(reviewId);

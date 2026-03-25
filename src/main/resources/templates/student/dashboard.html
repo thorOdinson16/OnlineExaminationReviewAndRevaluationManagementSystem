@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Student Dashboard - Exam Review System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: white;
+            color: #333;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .nav {
+            background: white;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .nav a {
+            float: left;
+            color: #333;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .nav a:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .nav a.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+        }
+        
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .status-pending {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .status-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .status-completed {
+            background: #3498db;
+            color: white;
+        }
+        
+        .status-failed {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .status-in-progress {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+        
+        .btn-back {
+            display: inline-block;
+            margin-top: 20px;
+            background: #95a5a6;
+        }
+        
+        .fee-amount {
+            color: #27ae60;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        @media (max-width: 768px) {
+            .nav a {
+                float: none;
+                display: block;
+                text-align: center;
+            }
+            
+            table {
+                font-size: 12px;
+            }
+            
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📚 Student Dashboard</h1>
+        <p>Welcome to Online Examination Review and Revaluation Management System</p>
+    </div>
+    
+    <div class="nav">
+        <a onclick="showSection('results')" class="active">📊 My Results</a>
+        <a onclick="showSection('apply')">✍️ Apply for Review</a>
+        <a onclick="showSection('status')">📝 Review Status</a>
+        <a onclick="showSection('revaluation')">🔄 Apply for Revaluation</a>
+        <a href="/login" style="float: right;">🚪 Logout</a>
+    </div>
+
+    <div class="container">
+        <!-- Results Section -->
+        <div id="results" class="section">
+            <h2>📊 My Exam Results</h2>
+            <div id="resultsList"></div>
+        </div>
+
+        <!-- Apply for Review Section -->
+        <div id="apply" class="section" style="display: none;">
+            <h2>✍️ Apply for Paper Review</h2>
+            <p style="margin-bottom: 20px; color: #666;">Review Fee: <span class="fee-amount">₹500</span> (per paper)</p>
+            <div id="applyForm">
+                <div class="form-group">
+                    <label>Select Answer Script for Review:</label>
+                    <select id="scriptSelect"></select>
+                </div>
+                <button onclick="applyForReview()">Apply for Review</button>
+            </div>
+            <div id="applyMessage" class="message"></div>
+        </div>
+
+        <!-- Review Status Section -->
+        <div id="status" class="section" style="display: none;">
+            <h2>📝 My Review Requests Status</h2>
+            <div id="reviewStatusList"></div>
+        </div>
+
+        <!-- Apply for Revaluation Section -->
+        <div id="revaluation" class="section" style="display: none;">
+            <h2>🔄 Apply for Full Revaluation</h2>
+            <p style="margin-bottom: 20px; color: #666;">Revaluation Fee: <span class="fee-amount">₹1500</span> (per paper)</p>
+            <div id="revaluationForm">
+                <div class="form-group">
+                    <label>Select Answer Script for Revaluation:</label>
+                    <select id="revaluationScriptSelect"></select>
+                </div>
+                <button onclick="applyForRevaluation()">Apply for Revaluation</button>
+            </div>
+            <div id="revaluationMessage" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        const studentId = localStorage.getItem('userId');
+        
+        if (!studentId) {
+            window.location.href = '/login';
+        }
+        
+        function showSection(sectionName) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById(sectionName).style.display = 'block';
+            
+            document.querySelectorAll('.nav a').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (sectionName === 'results') loadResults();
+            if (sectionName === 'apply') loadScripts();
+            if (sectionName === 'status') loadReviewStatus();
+            if (sectionName === 'revaluation') loadRevaluationScripts();
+        }
+        
+        async function loadResults() {
+            try {
+                const response = await fetch(`/student/results/${studentId}`);
+                const results = await response.json();
+                const resultsList = document.getElementById('resultsList');
+                
+                if (results.length === 0) {
+                    resultsList.innerHTML = '<p style="text-align: center; padding: 20px;">No exam results found.</p>';
+                    return;
+                }
+                
+                let html = '<table>\n<thead>\n<tr>\n<th>Script ID</th>\n<th>Subject</th>\n<th>Exam Date</th>\n<th>Marks Obtained</th>\n<th>Status</th>\n</tr>\n</thead>\n<tbody>';
+                results.forEach(script => {
+                    let statusClass = '';
+                    if (script.status === 'EVALUATED' || script.status === 'RESULTS_PUBLISHED') statusClass = 'status-success';
+                    else if (script.status === 'REVIEW_REQUESTED') statusClass = 'status-pending';
+                    else if (script.status === 'REVIEW_COMPLETED') statusClass = 'status-completed';
+                    else statusClass = 'status-pending';
+                    
+                    html += `<tr>
+                        <td>#${script.scriptId}</td>
+                        <td>${script.exam?.subject || 'N/A'}</td>
+                        <td>${script.exam?.examDate || 'N/A'}</td>
+                        <td><strong>${script.totalMarks || 'Not Evaluated'}</strong></td>
+                        <td><span class="status ${statusClass}">${script.status || 'PENDING'}</span></td>
+                    </tr>`;
+                });
+                html += '</tbody>\n</table>';
+                resultsList.innerHTML = html;
+            } catch (error) {
+                document.getElementById('resultsList').innerHTML = '<p class="message error">Error loading results. Please try again.</p>';
+            }
+        }
+        
+        async function loadScripts() {
+            try {
+                const response = await fetch(`/student/results/${studentId}`);
+                const scripts = await response.json();
+                const select = document.getElementById('scriptSelect');
+                select.innerHTML = '<option value="">Select a script</option>';
+                
+                const eligibleScripts = scripts.filter(script => 
+                    script.status === 'EVALUATED' || script.status === 'RESULTS_PUBLISHED'
+                );
+                
+                if (eligibleScripts.length === 0) {
+                    select.innerHTML = '<option value="">No eligible scripts for review</option>';
+                    return;
+                }
+                
+                eligibleScripts.forEach(script => {
+                    select.innerHTML += `<option value="${script.scriptId}">Script #${script.scriptId} - ${script.exam?.subject || 'Unknown Subject'} - Marks: ${script.totalMarks || 'N/A'}</option>`;
+                });
+            } catch (error) {
+                console.error('Error loading scripts:', error);
+            }
+        }
+        
+        async function applyForReview() {
+            const scriptId = document.getElementById('scriptSelect').value;
+            if (!scriptId) {
+                showMessage('applyMessage', 'Please select a script', 'error');
+                return;
+            }
+            
+            showMessage('applyMessage', 'Creating review request...', 'success');
+            
+            try {
+                const response = await fetch('/student/review/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        answerScript: { scriptId: parseInt(scriptId) },
+                        student: { userId: parseInt(studentId) }
+                    })
+                });
+                
+                const request = await response.json();
+                
+                if (response.ok) {
+                    showMessage('applyMessage', `✅ Review request created! Fee: ₹${request.reviewFee}. Redirecting to payment...`, 'success');
+                    setTimeout(() => {
+                        window.location.href = `/student/payment?reviewId=${request.reviewId}`;
+                    }, 2000);
+                } else {
+                    showMessage('applyMessage', 'Error creating review request', 'error');
+                }
+            } catch (error) {
+                showMessage('applyMessage', 'Error applying for review. Please try again.', 'error');
+            }
+        }
+        
+        async function loadReviewStatus() {
+            try {
+                const response = await fetch(`/student/review/${studentId}`);
+                const requests = await response.json();
+                const statusList = document.getElementById('reviewStatusList');
+                
+                if (requests.length === 0) {
+                    statusList.innerHTML = '<p style="text-align: center; padding: 20px;">No review requests found.</p>';
+                    return;
+                }
+                
+                let html = '<table>\n<thead>\n<tr>\n<th>Request ID</th>\n<th>Script ID</th>\n<th>Subject</th>\n<th>Fee</th>\n<th>Status</th>\n<th>Action</th>\n</tr>\n</thead>\n<tbody>';
+                requests.forEach(request => {
+                    let statusClass = '';
+                    if (request.reviewStatus === 'PAYMENT_SUCCESS') statusClass = 'status-success';
+                    else if (request.reviewStatus === 'PAYMENT_PENDING') statusClass = 'status-pending';
+                    else if (request.reviewStatus === 'IN_PROGRESS') statusClass = 'status-in-progress';
+                    else if (request.reviewStatus === 'COMPLETED') statusClass = 'status-completed';
+                    else statusClass = 'status-pending';
+                    
+                    let action = '';
+                    if (request.reviewStatus === 'PAYMENT_PENDING') {
+                        action = `<button onclick="payForReview(${request.reviewId})">Pay Now</button>`;
+                    } else if (request.reviewStatus === 'PAYMENT_SUCCESS') {
+                        action = '<span style="color: green;">✓ Paid - Awaiting Processing</span>';
+                    } else if (request.reviewStatus === 'IN_PROGRESS') {
+                        action = '<span style="color: orange;">⏳ In Progress</span>';
+                    } else if (request.reviewStatus === 'COMPLETED') {
+                        action = '<span style="color: green;">✓ Completed</span>';
+                    }
+                    
+                    html += `<tr>
+                        <td>#${request.reviewId}</td>
+                        <td>#${request.answerScript?.scriptId || 'N/A'}</td>
+                        <td>${request.answerScript?.exam?.subject || 'N/A'}</td>
+                        <td>₹${request.reviewFee}</td>
+                        <td><span class="status ${statusClass}">${request.reviewStatus}</span></td>
+                        <td>${action}</td>
+                    </tr>`;
+                });
+                html += '</tbody>\n</table>';
+                statusList.innerHTML = html;
+            } catch (error) {
+                document.getElementById('reviewStatusList').innerHTML = '<p class="message error">Error loading review status</p>';
+            }
+        }
+        
+        async function payForReview(reviewId) {
+            window.location.href = `/student/payment?reviewId=${reviewId}`;
+        }
+        
+        async function loadRevaluationScripts() {
+            try {
+                const response = await fetch(`/student/results/${studentId}`);
+                const scripts = await response.json();
+                const select = document.getElementById('revaluationScriptSelect');
+                select.innerHTML = '<option value="">Select a script</option>';
+                
+                const eligibleScripts = scripts.filter(script => 
+                    script.status === 'EVALUATED' || script.status === 'RESULTS_PUBLISHED'
+                );
+                
+                if (eligibleScripts.length === 0) {
+                    select.innerHTML = '<option value="">No eligible scripts for revaluation</option>';
+                    return;
+                }
+                
+                eligibleScripts.forEach(script => {
+                    select.innerHTML += `<option value="${script.scriptId}">Script #${script.scriptId} - ${script.exam?.subject || 'Unknown Subject'} - Marks: ${script.totalMarks || 'N/A'}</option>`;
+                });
+            } catch (error) {
+                console.error('Error loading scripts:', error);
+            }
+        }
+        
+        async function applyForRevaluation() {
+            const scriptId = document.getElementById('revaluationScriptSelect').value;
+            if (!scriptId) {
+                showMessage('revaluationMessage', 'Please select a script', 'error');
+                return;
+            }
+            
+            showMessage('revaluationMessage', 'Creating revaluation request...', 'success');
+            
+            try {
+                const response = await fetch(`/student/revaluation/apply?scriptId=${scriptId}&studentId=${studentId}`, {
+                    method: 'POST'
+                });
+                
+                const request = await response.json();
+                
+                if (response.ok) {
+                    showMessage('revaluationMessage', `✅ Revaluation request created! Fee: ₹1500. Status: ${request.revaluationStatus}. You will be notified once processed.`, 'success');
+                    setTimeout(() => {
+                        loadRevaluationScripts();
+                    }, 2000);
+                } else {
+                    showMessage('revaluationMessage', 'Error creating revaluation request', 'error');
+                }
+            } catch (error) {
+                showMessage('revaluationMessage', 'Error applying for revaluation. Please try again.', 'error');
+            }
+        }
+        
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `message ${type}`;
+            setTimeout(() => {
+                element.className = 'message';
+            }, 5000);
+        }
+        
+        // Load initial section
+        loadResults();
+    </script>
+</body>
+</html>

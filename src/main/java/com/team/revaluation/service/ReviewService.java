@@ -32,6 +32,11 @@ public class ReviewService {
         return reviewRequestRepository.save(request);
     }
 
+    public ReviewRequest getReviewById(Long reviewId) {
+        return reviewRequestRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review request not found with id: " + reviewId));
+    }
+
     public ReviewRequest processPaymentForReview(Long reviewId) {
         ReviewRequest request = reviewRequestRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review request not found"));

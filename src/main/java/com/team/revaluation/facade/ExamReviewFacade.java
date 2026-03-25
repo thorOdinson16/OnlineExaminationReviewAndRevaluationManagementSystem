@@ -44,14 +44,22 @@ public class ExamReviewFacade {
             AnswerScript script = answerScriptRepository.findById(scriptId)
                     .orElseThrow(() -> new RuntimeException("Script not found"));
             
+            // Check if script is eligible for review
+            if (!script.getStatus().equals("EVALUATED") && !script.getStatus().equals("RESULTS_PUBLISHED")) {
+                throw new RuntimeException("Script is not eligible for review. Current status: " + script.getStatus());
+            }
+            
             ReviewRequest request = new ReviewRequest();
             request.setStudent(student);
             request.setAnswerScript(script);
             
             ReviewRequest createdRequest = reviewService.applyForReview(request);
-            result.put("reviewRequest", createdRequest);
+            result.put("reviewId", createdRequest.getReviewId());
+            result.put("reviewFee", createdRequest.getReviewFee());
+            result.put("reviewStatus", createdRequest.getReviewStatus());
+            result.put("message", "Review request created successfully");
             
-            // Step 2: Process payment
+            // Step 2: Process payment automatically
             Payment payment = new Payment();
             payment.setAmount(createdRequest.getReviewFee());
             payment.setPaymentType("FULL");
@@ -59,23 +67,24 @@ public class ExamReviewFacade {
             payment.setStudent(student);
             
             Payment processedPayment = paymentService.processPayment(payment);
-            result.put("payment", processedPayment);
+            result.put("paymentId", processedPayment.getPaymentId());
+            result.put("paymentStatus", processedPayment.getPaymentStatus());
             
             // Step 3: Update request status if payment successful
             if ("SUCCESS".equals(processedPayment.getPaymentStatus())) {
                 ReviewRequest updatedRequest = reviewService.processPaymentForReview(createdRequest.getReviewId());
-                result.put("reviewRequest", updatedRequest);
-                
-                // Step 4: Send notification
-                notificationService.notifyReviewStatusChange(updatedRequest);
+                result.put("reviewStatus", updatedRequest.getReviewStatus());
+                result.put("finalStatus", "PAYMENT_SUCCESS");
                 result.put("message", "Review application and payment completed successfully");
             } else {
                 result.put("message", "Payment failed. Please try again.");
+                result.put("finalStatus", "PAYMENT_FAILED");
             }
             
         } catch (Exception e) {
             result.put("error", e.getMessage());
-            result.put("message", "Failed to process review application");
+            result.put("message", "Failed to process review application: " + e.getMessage());
+            result.put("finalStatus", "FAILED");
         }
         
         return result;
