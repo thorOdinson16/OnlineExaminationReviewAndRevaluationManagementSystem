@@ -26,10 +26,23 @@ public class ReviewService {
         return reviewRequestRepository.findAll();
     }
 
-    public ReviewRequest updateReviewStatus(Long reviewId, String status) {
+    public ReviewRequest updateReviewStatus(Long reviewId, String newStatus) {
         ReviewRequest request = reviewRequestRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found"));
-        request.setReviewStatus(status);
+        
+        String currentStatus = request.getReviewStatus();
+        
+        // Validation: Only allow transitioning to VERIFIED or REJECTED if currently PENDING or PAYMENT_SUCCESS
+        if ((currentStatus.equals("PENDING") || currentStatus.equals("PAYMENT_SUCCESS")) && 
+            (newStatus.equals("VERIFIED") || newStatus.equals("REJECTED"))) {
+            request.setReviewStatus(newStatus);
+        } else if (newStatus.equals("COMPLETED") && currentStatus.equals("IN_PROGRESS")) {
+            request.setReviewStatus(newStatus);
+        } else {
+            throw new RuntimeException("Invalid state transition from " + currentStatus + " to " + newStatus);
+        }
+        
         return reviewRequestRepository.save(request);
     }
 }
+
