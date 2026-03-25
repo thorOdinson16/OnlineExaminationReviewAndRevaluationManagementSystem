@@ -2,76 +2,413 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Payment - Exam Review System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; margin: 50px; }
-        .container { max-width: 500px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; }
-        input, select { width: 100%; padding: 8px; box-sizing: border-box; }
-        button { background-color: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; width: 100%; }
-        .card-details { border: 1px solid #ddd; padding: 15px; margin-top: 15px; border-radius: 5px; }
-        .error { color: red; margin-top: 10px; }
-        .success { color: green; margin-top: 10px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 550px;
+            max-width: 100%;
+            overflow: hidden;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h2 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .payment-info {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            margin: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .amount {
+            font-size: 36px;
+            font-weight: 700;
+            color: #667eea;
+            margin: 10px 0;
+        }
+
+        .amount small {
+            font-size: 16px;
+            font-weight: normal;
+            color: #666;
+        }
+
+        .description {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-container {
+            padding: 0 30px 30px;
+        }
+
+        .card-details {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-details h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-details h3 i {
+            color: #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group i {
+            position: absolute;
+            left: 15px;
+            top: 40px;
+            color: #999;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input:focus + i {
+            color: #667eea;
+        }
+
+        .card-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px 30px 30px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 480px) {
+            .form-container {
+                padding: 0 20px 20px;
+            }
+            
+            .card-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .amount {
+                font-size: 28px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Payment Details</h2>
-        <div id="paymentInfo"></div>
-        
-        <div class="card-details">
-            <h3>Card Details</h3>
-            <div class="form-group">
-                <label>Card Number:</label>
-                <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456">
-            </div>
-            <div class="form-group">
-                <label>Expiry Date:</label>
-                <input type="text" id="expiry" placeholder="MM/YY">
-            </div>
-            <div class="form-group">
-                <label>CVV:</label>
-                <input type="password" id="cvv" placeholder="123">
-            </div>
-            <div class="form-group">
-                <label>Cardholder Name:</label>
-                <input type="text" id="cardholderName">
-            </div>
+        <div class="header">
+            <h2><i class="fas fa-credit-card"></i> Secure Payment</h2>
+            <p>Complete your payment to submit review request</p>
         </div>
         
-        <button onclick="processPayment()">Pay Now</button>
-        <div id="message"></div>
-        <p style="margin-top: 20px;"><a href="/student/dashboard">Back to Dashboard</a></p>
+        <div class="payment-info" id="paymentInfo">
+            <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #667eea;"></i>
+            <p>Loading payment details...</p>
+        </div>
+        
+        <div class="form-container">
+            <div class="card-details">
+                <h3><i class="fas fa-credit-card"></i> Card Details</h3>
+                <div class="form-group">
+                    <label>Card Number</label>
+                    <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+                <div class="card-row">
+                    <div class="form-group">
+                        <label>Expiry Date</label>
+                        <input type="text" id="expiry" placeholder="MM/YY" maxlength="5">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="form-group">
+                        <label>CVV</label>
+                        <input type="password" id="cvv" placeholder="123" maxlength="4">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Cardholder Name</label>
+                    <input type="text" id="cardholderName" placeholder="Name as on card">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+            
+            <button id="payButton" onclick="processPayment()">
+                <i class="fas fa-lock"></i>
+                Pay Now
+            </button>
+            <div id="message"></div>
+        </div>
+        
+        <div class="footer">
+            <p><i class="fas fa-shield-alt"></i> Secured by SSL Encryption</p>
+            <p style="margin-top: 10px;"><a href="/student/dashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a></p>
+        </div>
     </div>
 
     <script>
         const reviewId = new URLSearchParams(window.location.search).get('reviewId');
         
+        if (!reviewId) {
+            window.location.href = '/student/dashboard';
+        }
+        
+        // Format card number with spaces
+        document.getElementById('cardNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s/g, '');
+            if (value.length > 16) value = value.slice(0, 16);
+            value = value.replace(/(\d{4})/g, '$1 ').trim();
+            e.target.value = value;
+        });
+        
+        // Format expiry date
+        document.getElementById('expiry').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\//g, '');
+            if (value.length >= 2) {
+                value = value.slice(0, 2) + '/' + value.slice(2, 4);
+            }
+            e.target.value = value;
+        });
+        
         async function loadPaymentInfo() {
             try {
                 const response = await fetch(`/student/review/${reviewId}`);
-                // Note: You'll need to add this endpoint to get a specific review
-                // For now, we'll show mock data
+                const data = await response.json();
+                
                 document.getElementById('paymentInfo').innerHTML = `
-                    <p><strong>Review Request ID:</strong> ${reviewId}</p>
-                    <p><strong>Amount:</strong> ₹500.00</p>
-                    <p><strong>Description:</strong> Paper Review Fee</p>
+                    <i class="fas fa-receipt" style="font-size: 32px; color: #667eea;"></i>
+                    <div class="amount">₹${data.reviewFee || 500}.00 <small>INR</small></div>
+                    <div class="description">
+                        <i class="fas fa-file-alt"></i> Review Request #${reviewId}<br>
+                        <i class="fas fa-graduation-cap"></i> Paper Review Service
+                    </div>
                 `;
             } catch (error) {
-                console.error('Error loading payment info:', error);
+                document.getElementById('paymentInfo').innerHTML = `
+                    <i class="fas fa-exclamation-triangle" style="font-size: 32px; color: #f39c12;"></i>
+                    <div class="amount">₹500.00 <small>INR</small></div>
+                    <div class="description">Paper Review Service</div>
+                `;
             }
         }
         
         async function processPayment() {
-            const cardNumber = document.getElementById('cardNumber').value;
+            const cardNumber = document.getElementById('cardNumber').value.replace(/\s/g, '');
             const expiry = document.getElementById('expiry').value;
             const cvv = document.getElementById('cvv').value;
             const cardholderName = document.getElementById('cardholderName').value;
             
             if (!cardNumber || !expiry || !cvv || !cardholderName) {
-                document.getElementById('message').innerHTML = '<div class="error">Please fill all card details</div>';
+                showMessage('Please fill all card details', 'error');
                 return;
             }
+            
+            if (cardNumber.length !== 16) {
+                showMessage('Please enter a valid 16-digit card number', 'error');
+                return;
+            }
+            
+            if (!/^\d{2}\/\d{2}$/.test(expiry)) {
+                showMessage('Please enter expiry date in MM/YY format', 'error');
+                return;
+            }
+            
+            if (cvv.length < 3) {
+                showMessage('Please enter a valid CVV', 'error');
+                return;
+            }
+            
+            const payButton = document.getElementById('payButton');
+            const originalText = payButton.innerHTML;
+            payButton.innerHTML = '<span class="loader"></span> Processing...';
+            payButton.disabled = true;
             
             try {
                 const response = await fetch(`/student/review/${reviewId}/pay`, {
@@ -81,16 +418,28 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    document.getElementById('message').innerHTML = '<div class="success">Payment successful! Your review request has been submitted.</div>';
+                    showMessage('✅ Payment successful! Your review request has been submitted. Redirecting...', 'success');
                     setTimeout(() => {
                         window.location.href = '/student/dashboard';
                     }, 2000);
                 } else {
-                    document.getElementById('message').innerHTML = '<div class="error">Payment failed. Please try again.</div>';
+                    showMessage('❌ Payment failed. Please try again.', 'error');
+                    payButton.innerHTML = originalText;
+                    payButton.disabled = false;
                 }
             } catch (error) {
-                document.getElementById('message').innerHTML = '<div class="error">Payment processing error. Please try again.</div>';
+                showMessage('❌ Payment processing error. Please try again.', 'error');
+                payButton.innerHTML = originalText;
+                payButton.disabled = false;
             }
+        }
+        
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="message ${type}">${message}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
         }
         
         loadPaymentInfo();
