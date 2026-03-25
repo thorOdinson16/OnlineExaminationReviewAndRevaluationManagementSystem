@@ -417,7 +417,7 @@
         
         async function loadReviewStatus() {
             try {
-                const response = await fetch(`/student/review/${studentId}`);
+                const response = await fetch(`/student/review/student/${studentId}`);
                 const requests = await response.json();
                 const statusList = document.getElementById('reviewStatusList');
                 
