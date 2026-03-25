@@ -1,3 +1,4 @@
+// File: src/main/java/com/team/revaluation/repository/ReviewRequestRepository.java
 package com.team.revaluation.repository;
 
 import com.team.revaluation.model.ReviewRequest;
@@ -8,4 +9,7 @@ import java.util.List;
 @Repository
 public interface ReviewRequestRepository extends JpaRepository<ReviewRequest, Long> {
     List<ReviewRequest> findByStudentUserId(Long studentId);
+    
+    // Add method to find pending reviews for admin verification
+    List<ReviewRequest> findByReviewStatus(String reviewStatus);
 }
