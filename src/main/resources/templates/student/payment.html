@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Payment - Exam Review System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        .container { max-width: 500px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { background-color: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; width: 100%; }
+        .card-details { border: 1px solid #ddd; padding: 15px; margin-top: 15px; border-radius: 5px; }
+        .error { color: red; margin-top: 10px; }
+        .success { color: green; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Payment Details</h2>
+        <div id="paymentInfo"></div>
+        
+        <div class="card-details">
+            <h3>Card Details</h3>
+            <div class="form-group">
+                <label>Card Number:</label>
+                <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456">
+            </div>
+            <div class="form-group">
+                <label>Expiry Date:</label>
+                <input type="text" id="expiry" placeholder="MM/YY">
+            </div>
+            <div class="form-group">
+                <label>CVV:</label>
+                <input type="password" id="cvv" placeholder="123">
+            </div>
+            <div class="form-group">
+                <label>Cardholder Name:</label>
+                <input type="text" id="cardholderName">
+            </div>
+        </div>
+        
+        <button onclick="processPayment()">Pay Now</button>
+        <div id="message"></div>
+        <p style="margin-top: 20px;"><a href="/student/dashboard">Back to Dashboard</a></p>
+    </div>
+
+    <script>
+        const reviewId = new URLSearchParams(window.location.search).get('reviewId');
+        
+        async function loadPaymentInfo() {
+            try {
+                const response = await fetch(`/student/review/${reviewId}`);
+                // Note: You'll need to add this endpoint to get a specific review
+                // For now, we'll show mock data
+                document.getElementById('paymentInfo').innerHTML = `
+                    <p><strong>Review Request ID:</strong> ${reviewId}</p>
+                    <p><strong>Amount:</strong> ₹500.00</p>
+                    <p><strong>Description:</strong> Paper Review Fee</p>
+                `;
+            } catch (error) {
+                console.error('Error loading payment info:', error);
+            }
+        }
+        
+        async function processPayment() {
+            const cardNumber = document.getElementById('cardNumber').value;
+            const expiry = document.getElementById('expiry').value;
+            const cvv = document.getElementById('cvv').value;
+            const cardholderName = document.getElementById('cardholderName').value;
+            
+            if (!cardNumber || !expiry || !cvv || !cardholderName) {
+                document.getElementById('message').innerHTML = '<div class="error">Please fill all card details</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/student/review/${reviewId}/pay`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('message').innerHTML = '<div class="success">Payment successful! Your review request has been submitted.</div>';
+                    setTimeout(() => {
+                        window.location.href = '/student/dashboard';
+                    }, 2000);
+                } else {
+                    document.getElementById('message').innerHTML = '<div class="error">Payment failed. Please try again.</div>';
+                }
+            } catch (error) {
+                document.getElementById('message').innerHTML = '<div class="error">Payment processing error. Please try again.</div>';
+            }
+        }
+        
+        loadPaymentInfo();
+    </script>
+</body>
+</html>

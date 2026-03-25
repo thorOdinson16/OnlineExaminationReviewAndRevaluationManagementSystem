@@ -1,7 +1,10 @@
 package com.team.revaluation.service;
 
+import com.team.revaluation.model.AnswerScript;
 import com.team.revaluation.model.ReviewRequest;
+import com.team.revaluation.model.Payment;
 import com.team.revaluation.repository.ReviewRequestRepository;
+import com.team.revaluation.repository.AnswerScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -12,10 +15,57 @@ public class ReviewService {
     @Autowired
     private ReviewRequestRepository reviewRequestRepository;
 
+    @Autowired
+    private AnswerScriptRepository answerScriptRepository;
+
+    @Autowired
+    private PaymentService paymentService;
+
+    @Autowired
+    private NotificationService notificationService;
+
     public ReviewRequest applyForReview(ReviewRequest request) {
+        // Use Strategy Pattern to set fee
+        FeeCalculationStrategy feeStrategy = new ReviewFeeStrategy();
+        request.setReviewFee(feeStrategy.calculateFee());
         request.setReviewStatus("PAYMENT_PENDING");
-        request.setReviewFee(500.0f);
         return reviewRequestRepository.save(request);
+    }
+
+    public ReviewRequest processPaymentForReview(Long reviewId) {
+        ReviewRequest request = reviewRequestRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review request not found"));
+
+        // Create payment record
+        Payment payment = new Payment();
+        payment.setAmount(request.getReviewFee());
+        payment.setPaymentType("FULL");
+        payment.setPaymentStatus("PENDING");
+        payment.setStudent(request.getStudent());
+
+        // Process payment
+        Payment processedPayment = paymentService.processPayment(payment);
+
+        if ("SUCCESS".equals(processedPayment.getPaymentStatus())) {
+            request.setReviewStatus("PAYMENT_SUCCESS");
+            
+            // Update script status to REVIEW_REQUESTED
+            AnswerScript script = request.getAnswerScript();
+            if (script != null) {
+                script.setStatus("REVIEW_REQUESTED");
+                answerScriptRepository.save(script);
+            }
+            
+            ReviewRequest savedRequest = reviewRequestRepository.save(request);
+            
+            // Notify about status change (Observer Pattern)
+            notificationService.notifyReviewStatusChange(savedRequest);
+            
+            return savedRequest;
+        } else {
+            request.setReviewStatus("PAYMENT_FAILED");
+            return reviewRequestRepository.save(request);
+        }
     }
 
     public List<ReviewRequest> getReviewsByStudent(Long studentId) {
@@ -42,7 +92,11 @@ public class ReviewService {
             throw new RuntimeException("Invalid state transition from " + currentStatus + " to " + newStatus);
         }
         
-        return reviewRequestRepository.save(request);
+        ReviewRequest updatedRequest = reviewRequestRepository.save(request);
+        
+        // Notify about status change (Observer Pattern)
+        notificationService.notifyReviewStatusChange(updatedRequest);
+        
+        return updatedRequest;
     }
 }
-
