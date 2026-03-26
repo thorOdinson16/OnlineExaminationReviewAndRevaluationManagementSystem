@@ -7,6 +7,12 @@ public class PaymentProxy implements IPaymentGateway {
 
     private IPaymentGateway realGateway;
 
+    // ✅ No-arg constructor - create the real gateway internally
+    public PaymentProxy() {
+        this.realGateway = PaymentGatewaySingleton.getInstance();
+    }
+    
+    // ✅ Keep the parameterized constructor for testing if needed
     public PaymentProxy(IPaymentGateway realGateway) {
         this.realGateway = realGateway;
     }

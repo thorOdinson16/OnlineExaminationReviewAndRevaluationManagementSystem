@@ -44,13 +44,20 @@ public class PaymentService {
     private PaymentValidationHandler validationChain;
     
     public PaymentService() {
-        // ✅ Use Decorator pattern - wrap the singleton gateway with logging decorator
-        IPaymentGateway gateway = PaymentGatewaySingleton.getInstance();
-        this.paymentGateway = new PaymentLoggingDecorator(gateway);
+        // ✅ Create real gateway
+        IPaymentGateway realGateway = PaymentGatewaySingleton.getInstance();
+        
+        // ✅ Wrap with Proxy for input validation
+        IPaymentGateway proxyGateway = new PaymentProxy(realGateway);
+        
+        // ✅ Wrap with Decorator for logging
+        this.paymentGateway = new PaymentLoggingDecorator(proxyGateway);
+        
+        System.out.println("PaymentService initialized with Proxy + Decorator patterns");
     }
     
     private void initializeValidationChain() {
-        // ✅ Build Chain of Responsibility
+        // Build Chain of Responsibility
         amountValidationHandler.setNext(studentExistsValidationHandler);
         studentExistsValidationHandler.setNext(scriptStatusValidationHandler);
         scriptStatusValidationHandler.setNext(gatewayValidationHandler);
@@ -64,7 +71,7 @@ public class PaymentService {
             initializeValidationChain();
         }
         
-        // ✅ Run through validation chain
+        // Run through validation chain
         try {
             validationChain.handle(payment, userRepository);
         } catch (RuntimeException e) {
@@ -73,11 +80,11 @@ public class PaymentService {
             return paymentRepository.save(payment);
         }
         
-        // ✅ Get appropriate payment processor using Abstract Factory
+        // Get appropriate payment processor using Abstract Factory
         PaymentProcessor processor = PaymentProcessorFactory.getPaymentProcessor(payment.getPaymentType());
         boolean processorSuccess = processor.process(payment);
         
-        // ✅ Process the transaction using the decorated gateway
+        // Process the transaction using the decorated and proxied gateway
         boolean gatewaySuccess = paymentGateway.processTransaction(payment.getAmount());
         
         // Update the database status based on the result
