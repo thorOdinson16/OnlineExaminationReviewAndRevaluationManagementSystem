@@ -306,11 +306,8 @@
                     messageDiv.innerHTML = '<div class="message success">Login successful! Redirecting...</div>';
                     
                     setTimeout(() => {
-                        if (data.role === 'STUDENT') {
-                            window.location.href = '/student/dashboard';
-                        } else {
-                            window.location.href = '/dashboard';
-                        }
+                        // Always redirect to /dashboard - it will handle role-based routing
+                        window.location.href = '/dashboard';
                     }, 1500);
                 } else {
                     messageDiv.innerHTML = `<div class="message error">${data.error || 'Login failed'}</div>`;
@@ -320,5 +317,5 @@
             }
         });
     </script>
-</body>
+   </body>
 </html>

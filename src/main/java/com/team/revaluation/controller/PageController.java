@@ -32,19 +32,37 @@ public class PageController {
         return "student/payment";
     }
 
-
     @GetMapping("/student/revaluation-status")
     public String revaluationStatus() {
         return "student/revaluation-status";
     }
 
-    @GetMapping("/revaluator/dashboard")
-    public String revaluatorDashboard() {
-        return "revaluator/dashboard";
+    // Dashboard redirect page
+    @GetMapping("/dashboard")
+    public String dashboard() {
+        return "dashboard";
+    }
+
+    // Admin pages
+    @GetMapping("/admin/dashboard")
+    public String adminDashboard() {
+        return "admin/dashboard";
     }
 
     @GetMapping("/admin/results")
     public String adminResults() {
         return "admin/results";
+    }
+
+    // Evaluator pages
+    @GetMapping("/evaluator/dashboard")
+    public String evaluatorDashboard() {
+        return "evaluator/dashboard";
+    }
+
+    // Revaluator pages - Single mapping (removed duplicate)
+    @GetMapping("/revaluator/dashboard")
+    public String revaluatorDashboard() {
+        return "revaluator/dashboard";
     }
 }

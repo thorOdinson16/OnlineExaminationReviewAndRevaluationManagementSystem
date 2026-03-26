@@ -57,7 +57,8 @@ public class PaymentService {
             validationChain.handle(payment, userRepository);
         } catch (RuntimeException e) {
             payment.setPaymentStatus("FAILED");
-            payment.setPaymentStatus(e.getMessage());
+            // Store error message in a separate field or log it
+            System.err.println("Payment validation failed: " + e.getMessage());
             return paymentRepository.save(payment);
         }
         

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Admin Dashboard - Exam Review System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: white;
+            padding: 25px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #2c3e50;
+        }
+
+        .header h1 i {
+            color: #3498db;
+            margin-right: 10px;
+        }
+
+        .nav {
+            background: white;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 10px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav a {
+            color: #475569;
+            padding: 12px 24px;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 40px;
+            transition: all 0.3s ease;
+        }
+
+        .nav a:hover {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card i {
+            font-size: 48px;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+
+        .stat-card h3 {
+            font-size: 32px;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .quick-actions {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .quick-actions h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #e2e8f0;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .action-btn {
+            background: #f8fafc;
+            padding: 15px;
+            text-align: center;
+            border-radius: 15px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 2px solid #e2e8f0;
+        }
+
+        .action-btn:hover {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .action-btn i {
+            font-size: 24px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .action-btn span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .action-btn:hover i,
+        .action-btn:hover span {
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-user-shield"></i> Admin Dashboard</h1>
+        <p>Welcome, <span id="adminName">Admin</span>!</p>
+    </div>
+
+    <div class="nav">
+        <a href="/admin/dashboard">Dashboard</a>
+        <a href="/admin/results">Results Management</a>
+        <a href="/view/admin/reviews">Review Requests</a>
+        <a href="/view/admin/revaluations">Revaluation Requests</a>
+        <a href="/view/admin/users">User Management</a>
+        <a href="/login" onclick="logout()">Logout</a>
+    </div>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card" onclick="window.location.href='/view/admin/reviews'">
+                <i class="fas fa-file-alt"></i>
+                <h3 id="pendingReviews">0</h3>
+                <p>Pending Review Requests</p>
+            </div>
+            <div class="stat-card" onclick="window.location.href='/view/admin/revaluations'">
+                <i class="fas fa-sync-alt"></i>
+                <h3 id="pendingRevaluations">0</h3>
+                <p>Pending Revaluation Requests</p>
+            </div>
+            <div class="stat-card" onclick="window.location.href='/admin/results'">
+                <i class="fas fa-chalkboard"></i>
+                <h3 id="scriptsUnderEvaluation">0</h3>
+                <p>Scripts Under Evaluation</p>
+            </div>
+            <div class="stat-card" onclick="window.location.href='/admin/results'">
+                <i class="fas fa-chart-line"></i>
+                <h3 id="totalScripts">0</h3>
+                <p>Total Answer Scripts</p>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
+            <div class="action-buttons">
+                <a href="/view/admin/reviews" class="action-btn">
+                    <i class="fas fa-eye"></i>
+                    <span>Verify Reviews</span>
+                </a>
+                <a href="/view/admin/revaluations" class="action-btn">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Verify Revaluations</span>
+                </a>
+                <a href="/admin/results" class="action-btn">
+                    <i class="fas fa-upload"></i>
+                    <span>Publish Results</span>
+                </a>
+                <a href="/admin/results" class="action-btn">
+                    <i class="fas fa-lock"></i>
+                    <span>Finalize Results</span>
+                </a>
+                <a href="/view/admin/users" class="action-btn">
+                    <i class="fas fa-users"></i>
+                    <span>Manage Users</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const adminName = localStorage.getItem('userName') || 'Admin';
+        document.getElementById('adminName').textContent = adminName;
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/admin/dashboard/overview');
+                const stats = await response.json();
+                document.getElementById('pendingReviews').textContent = stats.pendingReviews || 0;
+                document.getElementById('pendingRevaluations').textContent = stats.pendingRevaluations || 0;
+                document.getElementById('scriptsUnderEvaluation').textContent = stats.scriptsUnderEvaluation || 0;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadTotalScripts() {
+            try {
+                const response = await fetch('/admin/results/stats');
+                const stats = await response.json();
+                document.getElementById('totalScripts').textContent = stats.totalScripts || 0;
+            } catch (error) {
+                console.error('Error loading total scripts:', error);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('userId');
+            localStorage.removeItem('role');
+            localStorage.removeItem('userName');
+        }
+
+        loadStats();
+        loadTotalScripts();
+        
+        setInterval(() => {
+            loadStats();
+            loadTotalScripts();
+        }, 30000);
+    </script>
+</body>
+</html>

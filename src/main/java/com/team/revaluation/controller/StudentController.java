@@ -134,6 +134,12 @@ public class StudentController {
         return ResponseEntity.ok(answerScriptRepository.findByStudentUserId(studentId));
     }
 
+    // Get all results (for admin use)
+    @GetMapping("/results/all")
+    public ResponseEntity<List<AnswerScript>> getAllResults() {
+        return ResponseEntity.ok(answerScriptRepository.findAllWithDetails());
+    }
+
     // Get specific result by script ID
     @GetMapping("/results/script/{scriptId}")
     public ResponseEntity<AnswerScript> getScriptResult(@PathVariable Long scriptId) {

@@ -26,6 +26,7 @@ public class ReviewService {
     @Autowired
     private NotificationService notificationService;
 
+    @Transactional
     public ReviewRequest applyForReview(ReviewRequest request) {
         // Use Strategy Pattern to set fee
         FeeCalculationStrategy feeStrategy = new ReviewFeeStrategy();
@@ -99,6 +100,7 @@ public class ReviewService {
         return reviewRequestRepository.findByReviewStatus(status);
     }
 
+    @Transactional
     public ReviewRequest updateReviewStatus(Long reviewId, String newStatus) {
         ReviewRequest request = reviewRequestRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found"));
@@ -145,6 +147,7 @@ public class ReviewService {
     }
     
     // Cancel a review request (only if payment not yet processed)
+    @Transactional
     public ReviewRequest cancelReviewRequest(Long reviewId) {
         ReviewRequest request = reviewRequestRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found"));

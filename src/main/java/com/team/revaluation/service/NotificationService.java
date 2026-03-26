@@ -37,6 +37,16 @@ public class NotificationService {
     
     // Method to persist notification to database
     public void notifyStudent(Student student, String message) {
+        // Handle null student case
+        if (student == null) {
+            System.out.println(String.format(
+                "[NOTIFICATION - %s] System notification: %s",
+                LocalDateTime.now(),
+                message
+            ));
+            return;
+        }
+        
         Notification notification = new Notification();
         notification.setStudent(student);
         notification.setMessage(message);
@@ -90,7 +100,9 @@ public class NotificationService {
     }
     
     private void sendEmailNotification(Student student, String message) {
-        System.out.println("📧 Email sent to " + student.getEmail() + ": " + message);
+        if (student != null) {
+            System.out.println("📧 Email sent to " + student.getEmail() + ": " + message);
+        }
     }
     
     private void sendSmsNotification(Student student, String message) {
@@ -99,6 +111,9 @@ public class NotificationService {
     
     // Get unread notifications for a student
     public List<Notification> getUnreadNotifications(Student student) {
+        if (student == null) {
+            return new ArrayList<>();
+        }
         return notificationRepository.findByStudentAndIsReadFalse(student);
     }
     

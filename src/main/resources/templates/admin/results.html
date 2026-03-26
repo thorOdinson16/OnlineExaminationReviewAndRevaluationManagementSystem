@@ -315,7 +315,7 @@
                     return;
                 }
                 
-                let html = '\\\\.<thead>\\\\.<th>Script ID</th><th>Student</th><th>Subject</th><th>Marks</th><th>Status</th><th>Action</th>\\\\.</thead><tbody>';
+                let html = '<thead><tr><th>Script ID</th><th>Student</th><th>Subject</th><th>Marks</th><th>Status</th><th>Action</th></thead><tbody>';
                 publishable.forEach(script => {
                     html += `
                         <tr>
@@ -332,10 +332,11 @@
                         </tr>
                     `;
                 });
-                html += '</tbody>表';
+                html += '</tbody>';
                 container.innerHTML = html;
             } catch (error) {
                 console.error('Error loading publishable scripts:', error);
+                document.getElementById('publishList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading scripts</p></div>';
             }
         }
         
@@ -351,7 +352,7 @@
                     return;
                 }
                 
-                let html = '\\|<thead>\\|<th>Script ID</th><th>Student</th><th>Subject</th><th>Marks</th><th>Status</th><th>Action</th>\\|</thead><tbody>';
+                let html = '<thead><tr><th>Script ID</th><th>Student</th><th>Subject</th><th>Marks</th><th>Status</th><th>Action</th></thead><tbody>';
                 finalizable.forEach(script => {
                     html += `
                         <tr>
@@ -368,10 +369,11 @@
                         </tr>
                     `;
                 });
-                html += '</tbody>表';
+                html += '</tbody>';
                 container.innerHTML = html;
             } catch (error) {
                 console.error('Error loading finalizable scripts:', error);
+                document.getElementById('finalizeList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading scripts</p></div>';
             }
         }
         
