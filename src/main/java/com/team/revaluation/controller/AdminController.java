@@ -80,8 +80,6 @@ public class AdminController {
     // ==================== EVALUATOR ASSIGNMENT ====================
     
     // Assign evaluator to script
-    // Replace the existing assignEvaluator method with this one
-
     @PostMapping("/evaluator/assign")
     public ResponseEntity<Map<String, Object>> assignEvaluator(
             @RequestParam Long scriptId,
@@ -90,11 +88,24 @@ public class AdminController {
         AnswerScript script = answerScriptRepository.findById(scriptId)
                 .orElseThrow(() -> new RuntimeException("Script not found"));
 
-        User evaluator = userRepository.findById(evaluatorId)
+        User user = userRepository.findById(evaluatorId)
                 .orElseThrow(() -> new RuntimeException("Evaluator not found"));
 
-        if (!"EVALUATOR".equals(evaluator.getRole())) {
+        if (!"EVALUATOR".equals(user.getRole())) {
             throw new RuntimeException("User is not an evaluator");
+        }
+
+        // ✅ Safe cast - check if user is actually an Evaluator instance
+        Evaluator evaluator;
+        if (user instanceof Evaluator) {
+            evaluator = (Evaluator) user;
+        } else {
+            // If JPA inheritance returns base User, we need to fetch the Evaluator separately
+            evaluator = (Evaluator) userRepository.findById(evaluatorId)
+                    .orElseThrow(() -> new RuntimeException("Evaluator not found"));
+            if (!(evaluator instanceof Evaluator)) {
+                throw new RuntimeException("User is not an evaluator instance");
+            }
         }
 
         // Use state machine to transition (only allowed from SUBMITTED)
@@ -104,10 +115,10 @@ public class AdminController {
             throw new RuntimeException("Cannot assign evaluator: " + e.getMessage());
         }
 
-        script.setEvaluator((Evaluator) evaluator);
+        script.setEvaluator(evaluator);
         AnswerScript updatedScript = answerScriptRepository.save(script);
 
-        // Notify evaluator (optional)
+        // Notify evaluator
         notificationService.notifyStudent(null, "Script #" + scriptId + " assigned for evaluation to " + evaluator.getName());
 
         Map<String, Object> response = new HashMap<>();

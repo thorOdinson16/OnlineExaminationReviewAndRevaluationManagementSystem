@@ -2,7 +2,6 @@ package com.team.revaluation.controller;
 
 import com.team.revaluation.model.RevaluationRequest;
 import com.team.revaluation.model.AnswerScript;
-import com.team.revaluation.model.Notification;
 import com.team.revaluation.repository.RevaluationRequestRepository;
 import com.team.revaluation.repository.AnswerScriptRepository;
 import com.team.revaluation.service.NotificationService;
@@ -26,21 +25,18 @@ public class RevaluatorController {
     @Autowired
     private NotificationService notificationService;
 
-    // Get all revaluation requests (filtered to REVALUATION_IN_PROGRESS only)
     @GetMapping("/requests")
     public ResponseEntity<List<RevaluationRequest>> getAllRequests() {
         List<RevaluationRequest> requests = revaluationRequestRepository.findByRevaluationStatus("REVALUATION_IN_PROGRESS");
         return ResponseEntity.ok(requests);
     }
     
-    // Get pending revaluation requests for revaluator
     @GetMapping("/requests/pending")
     public ResponseEntity<List<RevaluationRequest>> getPendingRequests() {
         List<RevaluationRequest> requests = revaluationRequestRepository.findByRevaluationStatus("REVALUATION_IN_PROGRESS");
         return ResponseEntity.ok(requests);
     }
     
-    // Get specific revaluation request by ID
     @GetMapping("/requests/{id}")
     public ResponseEntity<RevaluationRequest> getRequestById(@PathVariable Long id) {
         RevaluationRequest request = revaluationRequestRepository.findById(id)
@@ -48,7 +44,7 @@ public class RevaluatorController {
         return ResponseEntity.ok(request);
     }
 
-    // Submit revaluation marks - Updates to REVALUATION_COMPLETED using State Machine
+    // ✅ Fixed: Use REVALUATION_COMPLETED instead of COMPLETED
     @PutMapping("/requests/{id}/submit")
     public ResponseEntity<Map<String, Object>> submitRevaluationMarks(
             @PathVariable Long id,
@@ -58,17 +54,15 @@ public class RevaluatorController {
         RevaluationRequest request = revaluationRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
         
-        // Check if request is in correct state
         if (!"REVALUATION_IN_PROGRESS".equals(request.getRevaluationStatus())) {
             throw new RuntimeException("Cannot submit marks. Request is in status: " + request.getRevaluationStatus());
         }
         
-        // Update the answer script with new marks
         AnswerScript script = request.getAnswerScript();
         Float oldMarks = script.getTotalMarks();
         script.setTotalMarks(marks);
         
-        // ✅ Use state machine instead of direct setStatus
+        // ✅ Use state machine with correct status
         try {
             com.team.revaluation.service.AnswerScriptStateMachine.transition(script, "REVALUATION_COMPLETED");
         } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
@@ -76,11 +70,10 @@ public class RevaluatorController {
         }
         answerScriptRepository.save(script);
         
-        // Update request status to REVALUATION_COMPLETED (per state diagram)
+        // ✅ Use correct status REVALUATION_COMPLETED
         request.setRevaluationStatus("REVALUATION_COMPLETED");
         RevaluationRequest savedRequest = revaluationRequestRepository.save(request);
         
-        // Notify student about revaluation completion (Observer Pattern)
         notificationService.notifyStudent(request.getStudent(), 
             String.format("✅ Revaluation completed for Script #%d. Marks updated from %.2f to %.2f. %s",
                 script.getScriptId(), oldMarks, marks, 
@@ -98,8 +91,6 @@ public class RevaluatorController {
         return ResponseEntity.ok(response);
     }
 
-    
-    // Get revaluation statistics for revaluator dashboard
     @GetMapping("/dashboard/stats")
     public ResponseEntity<Map<String, Object>> getDashboardStats() {
         List<RevaluationRequest> pending = revaluationRequestRepository.findByRevaluationStatus("REVALUATION_IN_PROGRESS");

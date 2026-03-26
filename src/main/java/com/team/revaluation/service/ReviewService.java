@@ -33,10 +33,13 @@ public class ReviewService {
 
     @Transactional
     public ReviewRequest applyForReview(ReviewRequest request) {
+        // ✅ Use strategy pattern for fee calculation
+        Float fee = reviewFeeStrategy.calculateFee();
+        
         ReviewRequest newRequest = new ReviewRequestBuilder()
                 .withStudent(request.getStudent())
                 .withAnswerScript(request.getAnswerScript())
-                .withReviewFee(reviewFeeStrategy.calculateFee())  // Now using strategy pattern
+                .withReviewFee(fee)
                 .withReviewStatus("PAYMENT_PENDING")
                 .build();
         return reviewRequestRepository.save(newRequest);

@@ -31,24 +31,29 @@ public class PaymentService {
     @Autowired
     private ScriptStatusValidationHandler scriptStatusValidationHandler;
     
-    private IPaymentGateway paymentGateway;
-    private PaymentValidationHandler validationChain;
-    
     @Autowired
     private AmountValidationHandler amountValidationHandler;
     
     @Autowired
     private StudentExistsValidationHandler studentExistsValidationHandler;
     
+    @Autowired
+    private GatewayValidationHandler gatewayValidationHandler;
+    
+    private IPaymentGateway paymentGateway;
+    private PaymentValidationHandler validationChain;
+    
     public PaymentService() {
-        // Use decorator pattern - wrap the singleton gateway with logging decorator
+        // ✅ Use Decorator pattern - wrap the singleton gateway with logging decorator
         IPaymentGateway gateway = PaymentGatewaySingleton.getInstance();
         this.paymentGateway = new PaymentLoggingDecorator(gateway);
     }
     
     private void initializeValidationChain() {
+        // ✅ Build Chain of Responsibility
         amountValidationHandler.setNext(studentExistsValidationHandler);
         studentExistsValidationHandler.setNext(scriptStatusValidationHandler);
+        scriptStatusValidationHandler.setNext(gatewayValidationHandler);
         this.validationChain = amountValidationHandler;
     }
 
@@ -59,7 +64,7 @@ public class PaymentService {
             initializeValidationChain();
         }
         
-        // Run through validation chain
+        // ✅ Run through validation chain
         try {
             validationChain.handle(payment, userRepository);
         } catch (RuntimeException e) {
@@ -68,15 +73,15 @@ public class PaymentService {
             return paymentRepository.save(payment);
         }
         
-        // Get appropriate payment processor using Abstract Factory
+        // ✅ Get appropriate payment processor using Abstract Factory
         PaymentProcessor processor = PaymentProcessorFactory.getPaymentProcessor(payment.getPaymentType());
-        boolean isSuccess = processor.process(payment);
+        boolean processorSuccess = processor.process(payment);
         
-        // Process the transaction using the decorated gateway
+        // ✅ Process the transaction using the decorated gateway
         boolean gatewaySuccess = paymentGateway.processTransaction(payment.getAmount());
         
         // Update the database status based on the result
-        if (isSuccess && gatewaySuccess) {
+        if (processorSuccess && gatewaySuccess) {
             payment.setPaymentStatus("SUCCESS");
         } else {
             payment.setPaymentStatus("FAILED");
@@ -85,37 +90,31 @@ public class PaymentService {
         return paymentRepository.save(payment);
     }
     
-    // Get payment by ID
     public Payment getPaymentById(Long paymentId) {
         return paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
     }
     
-    // Get all payments for a student
     public List<Payment> getPaymentsByStudent(Long studentId) {
         Student student = (Student) userRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
         return paymentRepository.findByStudent(student);
     }
     
-    // Get all payments
     public List<Payment> getAllPayments() {
         return paymentRepository.findAll();
     }
     
-    // Get payments by status
     public List<Payment> getPaymentsByStatus(String status) {
         return paymentRepository.findByPaymentStatus(status);
     }
     
-    // Get unread notifications for a student
     public List<Notification> getUnreadNotifications(Long studentId) {
         Student student = (Student) userRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
         return notificationRepository.findByStudentAndIsReadFalse(student);
     }
     
-    // Mark notification as read
     public void markNotificationAsRead(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
@@ -123,7 +122,6 @@ public class PaymentService {
         notificationRepository.save(notification);
     }
     
-    // Get all notifications for a student
     public List<Notification> getNotificationsByStudent(Long studentId) {
         Student student = (Student) userRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
