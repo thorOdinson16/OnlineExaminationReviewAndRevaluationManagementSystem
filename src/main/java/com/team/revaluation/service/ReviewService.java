@@ -5,9 +5,7 @@ import com.team.revaluation.model.AnswerScript;
 import com.team.revaluation.model.ReviewRequest;
 import com.team.revaluation.model.Payment;
 import com.team.revaluation.repository.ReviewRequestRepository;
-
 import com.team.revaluation.builder.ReviewRequestBuilder;
-
 import com.team.revaluation.repository.AnswerScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,14 +27,16 @@ public class ReviewService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private FeeCalculationStrategy reviewFeeStrategy;  // ✅ Injected strategy
+
     @Transactional
-    
     public ReviewRequest applyForReview(ReviewRequest request) {
-        // Use the builder to construct the new request
+        // Use the builder to construct the new request with injected strategy
         ReviewRequest newRequest = new ReviewRequestBuilder()
                 .withStudent(request.getStudent())
                 .withAnswerScript(request.getAnswerScript())
-                .withReviewFee(new ReviewFeeStrategy().calculateFee())
+                .withReviewFee(reviewFeeStrategy.calculateFee())  // ✅ Using injected strategy
                 .withReviewStatus("PAYMENT_PENDING")
                 .build();
         return reviewRequestRepository.save(newRequest);
@@ -52,36 +52,34 @@ public class ReviewService {
         ReviewRequest request = reviewRequestRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review request not found"));
 
-        // Check if already paid
         if ("PAYMENT_SUCCESS".equals(request.getReviewStatus())) {
             throw new RuntimeException("Payment already processed for this review request");
         }
 
-        // Create payment record
         Payment payment = new Payment();
         payment.setAmount(request.getReviewFee());
         payment.setPaymentType("FULL");
         payment.setPaymentStatus("PENDING");
         payment.setStudent(request.getStudent());
 
-        // Process payment
         Payment processedPayment = paymentService.processPayment(payment);
 
         if ("SUCCESS".equals(processedPayment.getPaymentStatus())) {
             request.setReviewStatus("PAYMENT_SUCCESS");
             
-            // Update script status to REVIEW_REQUESTED
             AnswerScript script = request.getAnswerScript();
             if (script != null) {
-                script.setStatus("REVIEW_REQUESTED");
+                // ✅ Use state machine instead of direct setStatus
+                try {
+                    com.team.revaluation.service.AnswerScriptStateMachine.transition(script, "REVIEW_REQUESTED");
+                } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
+                    throw new RuntimeException("Invalid state transition: " + e.getMessage());
+                }
                 answerScriptRepository.save(script);
             }
             
             ReviewRequest savedRequest = reviewRequestRepository.save(request);
-            
-            // Notify about status change (Observer Pattern)
             notificationService.notifyReviewStatusChange(savedRequest);
-            
             return savedRequest;
         } else {
             request.setReviewStatus("PAYMENT_FAILED");
@@ -97,12 +95,10 @@ public class ReviewService {
         return reviewRequestRepository.findAll();
     }
 
-    // Get pending reviews (PAYMENT_PENDING status) for admin verification
     public List<ReviewRequest> getPendingReviews() {
         return reviewRequestRepository.findByReviewStatus("PAYMENT_PENDING");
     }
 
-    // Get reviews with specific status
     public List<ReviewRequest> getReviewsByStatus(String status) {
         return reviewRequestRepository.findByReviewStatus(status);
     }
@@ -114,7 +110,6 @@ public class ReviewService {
         
         String currentStatus = request.getReviewStatus();
         
-        // Define valid state transitions
         boolean isValidTransition = false;
         
         switch (currentStatus) {
@@ -128,13 +123,13 @@ public class ReviewService {
                 isValidTransition = newStatus.equals("COMPLETED");
                 break;
             case "COMPLETED":
-                isValidTransition = false; // Final state, no further transitions
+                isValidTransition = false;
                 break;
             case "VERIFIED":
                 isValidTransition = newStatus.equals("IN_PROGRESS");
                 break;
             case "REJECTED":
-                isValidTransition = false; // Final state
+                isValidTransition = false;
                 break;
             default:
                 isValidTransition = false;
@@ -146,14 +141,11 @@ public class ReviewService {
         
         request.setReviewStatus(newStatus);
         ReviewRequest updatedRequest = reviewRequestRepository.save(request);
-        
-        // Notify about status change (Observer Pattern)
         notificationService.notifyReviewStatusChange(updatedRequest);
         
         return updatedRequest;
     }
     
-    // Cancel a review request (only if payment not yet processed)
     @Transactional
     public ReviewRequest cancelReviewRequest(Long reviewId) {
         ReviewRequest request = reviewRequestRepository.findById(reviewId)
@@ -170,5 +162,11 @@ public class ReviewService {
             "Review request #" + reviewId + " has been cancelled.");
         
         return updatedRequest;
+    }
+    
+    // ✅ New method for admin to verify review
+    @Transactional
+    public ReviewRequest verifyReview(Long reviewId) {
+        return updateReviewStatus(reviewId, "VERIFIED");
     }
 }

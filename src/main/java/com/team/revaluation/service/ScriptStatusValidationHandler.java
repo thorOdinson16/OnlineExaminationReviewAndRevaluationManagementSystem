@@ -4,6 +4,8 @@ import com.team.revaluation.model.Payment;
 import com.team.revaluation.model.AnswerScript;
 import com.team.revaluation.repository.UserRepository;
 import com.team.revaluation.repository.AnswerScriptRepository;
+import com.team.revaluation.repository.ReviewRequestRepository;
+import com.team.revaluation.repository.RevaluationRequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -11,29 +13,55 @@ import org.springframework.stereotype.Component;
 public class ScriptStatusValidationHandler extends PaymentValidationHandler {
     
     private AnswerScriptRepository answerScriptRepository;
+    private ReviewRequestRepository reviewRequestRepository;
+    private RevaluationRequestRepository revaluationRequestRepository;
     
     @Autowired
     public void setAnswerScriptRepository(AnswerScriptRepository answerScriptRepository) {
         this.answerScriptRepository = answerScriptRepository;
     }
     
+    @Autowired
+    public void setReviewRequestRepository(ReviewRequestRepository reviewRequestRepository) {
+        this.reviewRequestRepository = reviewRequestRepository;
+    }
+    
+    @Autowired
+    public void setRevaluationRequestRepository(RevaluationRequestRepository revaluationRequestRepository) {
+        this.revaluationRequestRepository = revaluationRequestRepository;
+    }
+    
     @Override
     public void handle(Payment payment, UserRepository userRepository) {
-        // For review/revaluation payments, we need to validate the associated script
-        // Since Payment doesn't directly have script reference, we'll check if there's
-        // any pending review or revaluation request for this student
-        
+        // ✅ Actual implementation: Validate that there's a pending review/revaluation request
         System.out.println("ScriptStatusValidationHandler: Validating script eligibility");
         
-        // This is a simplified validation
-        // In a real implementation, you would check if the student has any
-        // pending review/revaluation requests that need payment
-        
         if (payment.getStudent() != null) {
-            // Check if student has any pending review requests
-            // This would require ReviewRequestRepository injection
-            System.out.println("ScriptStatusValidationHandler: Student " + 
-                payment.getStudent().getName() + " is eligible for payment");
+            Long studentId = payment.getStudent().getUserId();
+            
+            // Check if student has any pending review requests with PAYMENT_PENDING status
+            List<com.team.revaluation.model.ReviewRequest> pendingReviews = 
+                reviewRequestRepository.findByStudentUserId(studentId);
+            
+            boolean hasPendingReview = pendingReviews.stream()
+                .anyMatch(req -> "PAYMENT_PENDING".equals(req.getReviewStatus()));
+            
+            // Check if student has any pending revaluation requests with PAYMENT_PENDING status
+            List<com.team.revaluation.model.RevaluationRequest> pendingRevaluations = 
+                revaluationRequestRepository.findByStudentUserId(studentId);
+            
+            boolean hasPendingRevaluation = pendingRevaluations.stream()
+                .anyMatch(req -> "PAYMENT_PENDING".equals(req.getRevaluationStatus()));
+            
+            if (!hasPendingReview && !hasPendingRevaluation) {
+                // No pending requests, but payment is being processed - this could be valid
+                // For now, we'll allow it but log a warning
+                System.out.println("⚠️ ScriptStatusValidationHandler: No pending review/revaluation request found for student " + 
+                    payment.getStudent().getName() + ". Proceeding with payment.");
+            } else {
+                System.out.println("✅ ScriptStatusValidationHandler: Valid pending request found for student " + 
+                    payment.getStudent().getName());
+            }
         }
         
         handleNext(payment, userRepository);

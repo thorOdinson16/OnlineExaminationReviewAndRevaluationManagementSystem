@@ -16,11 +16,31 @@ import java.util.List;
 @Service
 public class NotificationService {
     
+    // ✅ Singleton instance
+    private static NotificationService instance;
+    
     @Autowired
     private NotificationRepository notificationRepository;
     
-    // Singleton pattern using Spring's singleton scope
+    // List of listeners (Observer pattern)
     private List<NotificationListener> listeners = new ArrayList<>();
+    
+    // ✅ Private constructor for Singleton
+    private NotificationService() {}
+    
+    // ✅ Public static method to get instance (called by Spring)
+    public static synchronized NotificationService getInstance() {
+        if (instance == null) {
+            instance = new NotificationService();
+        }
+        return instance;
+    }
+    
+    // ✅ Setter for Spring injection (called after instance creation)
+    @Autowired
+    public void setNotificationRepository(NotificationRepository notificationRepository) {
+        this.notificationRepository = notificationRepository;
+    }
     
     public interface NotificationListener {
         void onReviewStatusChanged(ReviewRequest request);
@@ -37,7 +57,6 @@ public class NotificationService {
     
     // Method to persist notification to database
     public void notifyStudent(Student student, String message) {
-        // Handle null student case
         if (student == null) {
             System.out.println(String.format(
                 "[NOTIFICATION - %s] System notification: %s",
@@ -51,9 +70,10 @@ public class NotificationService {
         notification.setStudent(student);
         notification.setMessage(message);
         notification.setIsRead(false);
-        notificationRepository.save(notification);
+        if (notificationRepository != null) {
+            notificationRepository.save(notification);
+        }
         
-        // Also print to console for demonstration
         System.out.println(String.format(
             "[NOTIFICATION - %s] To: %s (%s) - %s",
             LocalDateTime.now(),
@@ -62,10 +82,7 @@ public class NotificationService {
             message
         ));
         
-        // Simulate email notification
         sendEmailNotification(student, message);
-        
-        // Simulate SMS notification
         sendSmsNotification(student, message);
     }
     
@@ -78,7 +95,6 @@ public class NotificationService {
         
         notifyStudent(request.getStudent(), message);
         
-        // Notify all registered listeners
         for (NotificationListener listener : listeners) {
             listener.onReviewStatusChanged(request);
         }
@@ -93,7 +109,6 @@ public class NotificationService {
         
         notifyStudent(request.getStudent(), message);
         
-        // Notify all registered listeners
         for (NotificationListener listener : listeners) {
             listener.onRevaluationStatusChanged(request);
         }
@@ -109,16 +124,15 @@ public class NotificationService {
         System.out.println("📱 SMS sent to student: " + message);
     }
     
-    // Get unread notifications for a student
     public List<Notification> getUnreadNotifications(Student student) {
-        if (student == null) {
+        if (student == null || notificationRepository == null) {
             return new ArrayList<>();
         }
         return notificationRepository.findByStudentAndIsReadFalse(student);
     }
     
-    // Mark notification as read
     public void markAsRead(Long notificationId) {
+        if (notificationRepository == null) return;
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
         notification.setIsRead(true);

@@ -31,6 +31,9 @@ public class RevaluationService {
     @Autowired
     private PaymentService paymentService;
 
+    @Autowired
+    private FeeCalculationStrategy revaluationFeeStrategy;  // ✅ Injected strategy
+
     @Transactional
     public RevaluationRequest applyForRevaluation(Long scriptId, Long studentId) {
         AnswerScript script = answerScriptRepository.findById(scriptId)
@@ -39,12 +42,10 @@ public class RevaluationService {
         Student student = (Student) userRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found with id: " + studentId));
 
-        // Check if script is eligible for revaluation
         if (!script.getStatus().equals("EVALUATED") && !script.getStatus().equals("RESULTS_PUBLISHED")) {
             throw new RuntimeException("Script is not eligible for revaluation. Current status: " + script.getStatus());
         }
 
-        // Check if revaluation request already exists and is not cancelled/rejected
         List<RevaluationRequest> existingRequests = revaluationRepo.findByStudentUserId(studentId);
         for (RevaluationRequest req : existingRequests) {
             if (req.getAnswerScript().getScriptId().equals(scriptId) &&
@@ -58,13 +59,13 @@ public class RevaluationService {
         RevaluationRequest request = new RevaluationRequest();
         request.setStudent(student);
         request.setAnswerScript(script);
-        request.setRevaluationFee(1500.0f);
+        request.setRevaluationFee(revaluationFeeStrategy.calculateFee());  // ✅ Using injected strategy
         request.setRevaluationStatus("PAYMENT_PENDING");
 
         RevaluationRequest savedRequest = revaluationRepo.save(request);
 
         notificationService.notifyStudent(student,
-            "Revaluation request #" + savedRequest.getRevaluationId() + " created. Fee: ₹1500. Please complete payment.");
+            "Revaluation request #" + savedRequest.getRevaluationId() + " created. Fee: ₹" + revaluationFeeStrategy.calculateFee() + ". Please complete payment.");
 
         return savedRequest;
     }
@@ -95,23 +96,25 @@ public class RevaluationService {
             throw new RuntimeException("Cannot process payment. Request is in status: " + request.getRevaluationStatus());
         }
 
-        // Create payment record
         Payment payment = new Payment();
         payment.setAmount(request.getRevaluationFee());
         payment.setPaymentType("FULL");
         payment.setPaymentStatus("PENDING");
         payment.setStudent(request.getStudent());
 
-        // Process payment
         Payment processedPayment = paymentService.processPayment(payment);
 
         if ("SUCCESS".equals(processedPayment.getPaymentStatus())) {
             request.setRevaluationStatus("PAYMENT_SUCCESS");
 
-            // Update script status
             AnswerScript script = request.getAnswerScript();
             if (script != null) {
-                script.setStatus("REVALUATION_REQUESTED");
+                // ✅ Use state machine instead of direct setStatus
+                try {
+                    com.team.revaluation.service.AnswerScriptStateMachine.transition(script, "REVALUATION_REQUESTED");
+                } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
+                    throw new RuntimeException("Invalid state transition: " + e.getMessage());
+                }
                 answerScriptRepository.save(script);
             }
 
@@ -136,7 +139,6 @@ public class RevaluationService {
 
         String currentStatus = request.getRevaluationStatus();
 
-        // Define valid state transitions
         boolean isValidTransition = false;
 
         switch (currentStatus) {
@@ -156,13 +158,13 @@ public class RevaluationService {
                 isValidTransition = newStatus.equals("REVALUATION_COMPLETED");
                 break;
             case "REVALUATION_COMPLETED":
-                isValidTransition = false; // Final state
+                isValidTransition = false;
                 break;
             case "CANCELLED":
-                isValidTransition = false; // Final state
+                isValidTransition = false;
                 break;
             case "REJECTED":
-                isValidTransition = false; // Final state
+                isValidTransition = false;
                 break;
             case "PAYMENT_FAILED":
                 isValidTransition = newStatus.equals("PAYMENT_PENDING") || newStatus.equals("CANCELLED");
@@ -177,34 +179,28 @@ public class RevaluationService {
 
         request.setRevaluationStatus(newStatus);
         RevaluationRequest updatedRequest = revaluationRepo.save(request);
-
         notificationService.notifyRevaluationStatusChange(updatedRequest);
 
         return updatedRequest;
     }
 
-    // Get revaluation requests by status (for revaluator)
     public List<RevaluationRequest> getRevaluationsByStatusForRevaluator(String status, Long revaluatorId) {
         return revaluationRepo.findByRevaluatorUserIdAndRevaluationStatus(revaluatorId, status);
     }
 
-    // Get pending revaluation requests for revaluator
     public List<RevaluationRequest> getPendingForRevaluator() {
         return revaluationRepo.findPendingForRevaluator();
     }
 
-    // Count revaluations by status
     public long countByStatus(String status) {
         return revaluationRepo.countByStatus(status);
     }
 
-    // Verify revaluation request (admin)
     @Transactional
     public RevaluationRequest verifyRevaluation(Long revaluationId) {
         return updateRevaluationStatus(revaluationId, "VERIFIED");
     }
 
-    // Reject revaluation request
     @Transactional
     public RevaluationRequest rejectRevaluation(Long revaluationId, String reason) {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
@@ -220,7 +216,6 @@ public class RevaluationService {
         return savedRequest;
     }
 
-    // Cancel a revaluation request (only if payment not yet processed)
     @Transactional
     public RevaluationRequest cancelRevaluationRequest(Long revaluationId) {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)

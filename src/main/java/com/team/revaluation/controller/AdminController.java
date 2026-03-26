@@ -69,6 +69,14 @@ public class AdminController {
         return ResponseEntity.ok(reviewService.updateReviewStatus(reviewId, status));
     }
     
+    // Verify a review request (admin approval)
+    @PutMapping("/reviews/{reviewId}/verify")
+    public ResponseEntity<ReviewRequest> verifyReview(@PathVariable Long reviewId) {
+        // This transitions from PAYMENT_PENDING → VERIFIED → IN_PROGRESS
+        ReviewRequest verified = reviewService.verifyReview(reviewId);
+        return ResponseEntity.ok(verified);
+    }
+
     // ==================== EVALUATOR ASSIGNMENT ====================
     
     // Assign evaluator to script
@@ -180,7 +188,11 @@ public class AdminController {
             throw new RuntimeException("Cannot publish results. Script is in status: " + script.getStatus());
         }
         
-        script.setStatus("RESULTS_PUBLISHED");
+        try {
+            AnswerScriptStateMachine.transition(script, "RESULTS_PUBLISHED");
+        } catch (InvalidStateTransitionException e) {
+            throw new RuntimeException("Cannot publish results: " + e.getMessage());
+        }
         AnswerScript updatedScript = answerScriptRepository.save(script);
         
         // Notify student about result publication
@@ -221,7 +233,11 @@ public class AdminController {
         }
         
         // Set status to FINALIZED (terminal state)
-        script.setStatus("FINALIZED");
+        try {
+            AnswerScriptStateMachine.transition(script, "FINALIZED");
+        } catch (InvalidStateTransitionException e) {
+            throw new RuntimeException("Cannot finalize results: " + e.getMessage());
+        }
         AnswerScript finalizedScript = answerScriptRepository.save(script);
         
         // Notify student about finalization
@@ -252,7 +268,13 @@ public class AdminController {
             try {
                 AnswerScript script = answerScriptRepository.findById(scriptId).orElse(null);
                 if (script != null && ("EVALUATED".equals(script.getStatus()) || "REVIEW_COMPLETED".equals(script.getStatus()))) {
-                    script.setStatus("RESULTS_PUBLISHED");
+                    try {
+                        AnswerScriptStateMachine.transition(script, "RESULTS_PUBLISHED");
+                    } catch (InvalidStateTransitionException e) {
+                        System.err.println("Failed to publish script " + scriptId + ": " + e.getMessage());
+                        failed++;
+                        continue;
+                    }
                     answerScriptRepository.save(script);
                     published++;
                     

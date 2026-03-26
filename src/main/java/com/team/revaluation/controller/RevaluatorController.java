@@ -48,7 +48,7 @@ public class RevaluatorController {
         return ResponseEntity.ok(request);
     }
 
-    // Submit revaluation marks - Updates to REVALUATION_COMPLETED (not COMPLETED)
+    // Submit revaluation marks - Updates to REVALUATION_COMPLETED using State Machine
     @PutMapping("/requests/{id}/submit")
     public ResponseEntity<Map<String, Object>> submitRevaluationMarks(
             @PathVariable Long id,
@@ -67,7 +67,13 @@ public class RevaluatorController {
         AnswerScript script = request.getAnswerScript();
         Float oldMarks = script.getTotalMarks();
         script.setTotalMarks(marks);
-        script.setStatus("REVALUATION_COMPLETED");
+        
+        // ✅ Use state machine instead of direct setStatus
+        try {
+            com.team.revaluation.service.AnswerScriptStateMachine.transition(script, "REVALUATION_COMPLETED");
+        } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
+            throw new RuntimeException("Invalid state transition: " + e.getMessage());
+        }
         answerScriptRepository.save(script);
         
         // Update request status to REVALUATION_COMPLETED (per state diagram)
@@ -91,6 +97,7 @@ public class RevaluatorController {
         
         return ResponseEntity.ok(response);
     }
+
     
     // Get revaluation statistics for revaluator dashboard
     @GetMapping("/dashboard/stats")
