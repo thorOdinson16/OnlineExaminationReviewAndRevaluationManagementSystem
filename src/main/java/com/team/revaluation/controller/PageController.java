@@ -32,8 +32,19 @@ public class PageController {
         return "student/payment";
     }
 
+
     @GetMapping("/student/revaluation-status")
     public String revaluationStatus() {
         return "student/revaluation-status";
+    }
+
+    @GetMapping("/revaluator/dashboard")
+    public String revaluatorDashboard() {
+        return "revaluator/dashboard";
+    }
+
+    @GetMapping("/admin/results")
+    public String adminResults() {
+        return "admin/results";
     }
 }

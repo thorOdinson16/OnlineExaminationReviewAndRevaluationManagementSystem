@@ -1,6 +1,7 @@
 // File: src/main/java/com/team/revaluation/service/PaymentService.java
 package com.team.revaluation.service;
 
+import com.team.revaluation.factory.PaymentProcessorFactory;
 import com.team.revaluation.model.Notification;
 import com.team.revaluation.model.Payment;
 import com.team.revaluation.model.Student;
@@ -25,32 +26,50 @@ public class PaymentService {
     
     private IPaymentGateway paymentGateway;
     
+    // Chain of Responsibility for payment validation
+    private PaymentValidationHandler validationChain;
+    
     public PaymentService() {
         // Use decorator pattern - wrap the singleton gateway with logging decorator
         IPaymentGateway gateway = PaymentGatewaySingleton.getInstance();
         this.paymentGateway = new PaymentLoggingDecorator(gateway);
+        
+        // Initialize validation chain
+        initializeValidationChain();
+    }
+    
+    private void initializeValidationChain() {
+        AmountValidationHandler amountHandler = new AmountValidationHandler();
+        StudentExistsValidationHandler studentHandler = new StudentExistsValidationHandler();
+        ScriptStatusValidationHandler scriptHandler = new ScriptStatusValidationHandler();
+        GatewayValidationHandler gatewayHandler = new GatewayValidationHandler();
+        
+        amountHandler.setNext(studentHandler);
+        studentHandler.setNext(scriptHandler);
+        scriptHandler.setNext(gatewayHandler);
+        
+        this.validationChain = amountHandler;
     }
 
     public Payment processPayment(Payment payment) {
-        // Validate amount
-        if (payment.getAmount() == null || payment.getAmount() <= 0) {
+        // Run through validation chain
+        try {
+            validationChain.handle(payment, userRepository);
+        } catch (RuntimeException e) {
             payment.setPaymentStatus("FAILED");
-            payment.setPaymentStatus("INVALID_AMOUNT");
+            payment.setPaymentStatus(e.getMessage());
             return paymentRepository.save(payment);
         }
         
-        // Validate student exists
-        if (payment.getStudent() == null || payment.getStudent().getUserId() == null) {
-            payment.setPaymentStatus("FAILED");
-            payment.setPaymentStatus("INVALID_STUDENT");
-            return paymentRepository.save(payment);
-        }
+        // Get appropriate payment processor using Abstract Factory
+        PaymentProcessor processor = PaymentProcessorFactory.getPaymentProcessor(payment.getPaymentType());
+        boolean isSuccess = processor.process(payment);
         
         // Process the transaction using the decorated gateway
-        boolean isSuccess = paymentGateway.processTransaction(payment.getAmount());
+        boolean gatewaySuccess = paymentGateway.processTransaction(payment.getAmount());
         
         // Update the database status based on the result
-        if (isSuccess) {
+        if (isSuccess && gatewaySuccess) {
             payment.setPaymentStatus("SUCCESS");
         } else {
             payment.setPaymentStatus("FAILED");
@@ -69,8 +88,6 @@ public class PaymentService {
     public List<Payment> getPaymentsByStudent(Long studentId) {
         Student student = (Student) userRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
-        // This assumes you have a method in PaymentRepository to find by student
-        // If not, we need to add it to the repository
         return paymentRepository.findByStudent(student);
     }
     

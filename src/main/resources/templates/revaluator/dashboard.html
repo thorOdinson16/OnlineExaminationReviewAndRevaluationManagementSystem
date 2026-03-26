@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Revaluator Dashboard - Exam Review System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: white;
+            padding: 25px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #1e3c72;
+            margin-bottom: 5px;
+        }
+
+        .header h1 i {
+            color: #2a5298;
+            margin-right: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .nav {
+            background: white;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 10px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav a {
+            color: #475569;
+            text-align: center;
+            padding: 12px 24px;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-radius: 40px;
+        }
+
+        .nav a:hover, .nav a.active {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card i {
+            font-size: 40px;
+            color: #2a5298;
+            margin-bottom: 15px;
+        }
+
+        .stat-card h3 {
+            font-size: 32px;
+            color: #1e3c72;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #1e3c72;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .status-progress {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+
+        .status-completed {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        button {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 0 4px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(30, 60, 114, 0.3);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            width: 500px;
+            max-width: 90%;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #1e3c72;
+        }
+
+        .modal-content input, .modal-content textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .modal-content button {
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            table {
+                font-size: 12px;
+            }
+            
+            th, td {
+                padding: 8px;
+            }
+            
+            .nav a {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-chalkboard-user"></i> Revaluator Dashboard</h1>
+        <p>Manage revaluation requests and submit revised marks</p>
+    </div>
+
+    <div class="nav">
+        <a onclick="showSection('pending')" class="active">Pending Requests</a>
+        <a onclick="showSection('completed')">Completed</a>
+        <a href="/login">Logout</a>
+    </div>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <i class="fas fa-clock"></i>
+                <h3 id="pendingCount">0</h3>
+                <p>Pending Revaluations</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-check-circle"></i>
+                <h3 id="completedCount">0</h3>
+                <p>Completed Revaluations</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-chart-line"></i>
+                <h3 id="totalCount">0</h3>
+                <p>Total Processed</p>
+            </div>
+        </div>
+
+        <div id="pending" class="section">
+            <h2><i class="fas fa-hourglass-half"></i> Pending Revaluation Requests</h2>
+            <div id="pendingList"></div>
+        </div>
+
+        <div id="completed" class="section" style="display: none;">
+            <h2><i class="fas fa-check-double"></i> Completed Revaluations</h2>
+            <div id="completedList"></div>
+        </div>
+    </div>
+
+    <div id="marksModal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-edit"></i> Submit Revaluation Marks</h3>
+            <p>Request ID: <strong id="modalRequestId"></strong></p>
+            <p>Current Marks: <strong id="modalCurrentMarks"></strong></p>
+            <input type="number" id="newMarks" step="0.01" placeholder="Enter new marks">
+            <textarea id="comments" rows="3" placeholder="Additional comments (optional)"></textarea>
+            <button onclick="submitMarks()">Submit Revaluation Marks</button>
+            <button onclick="closeModal()" style="background: #64748b;">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let currentRequestId = null;
+        
+        async function loadStats() {
+            try {
+                const response = await fetch('/revaluator/dashboard/stats');
+                const stats = await response.json();
+                document.getElementById('pendingCount').textContent = stats.pendingCount || 0;
+                document.getElementById('completedCount').textContent = stats.completedCount || 0;
+                document.getElementById('totalCount').textContent = (stats.pendingCount + stats.completedCount) || 0;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        async function loadPendingRequests() {
+            try {
+                const response = await fetch('/revaluator/requests/pending');
+                const requests = await response.json();
+                const container = document.getElementById('pendingList');
+                
+                if (requests.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No pending revaluation requests</p></div>';
+                    return;
+                }
+                
+                let html = '</table><thead>运转<th>Request ID</th><th>Script ID</th><th>Student</th><th>Subject</th><th>Current Marks</th><th>Status</th><th>Action</th></thead><tbody>';
+                requests.forEach(req => {
+                    html += `
+                        <tr>
+                            <td>#${req.revaluationId}</td>
+                            <td>#${req.answerScript?.scriptId || 'N/A'}</td>
+                            <td>${req.student?.name || 'N/A'}</td>
+                            <td>${req.answerScript?.exam?.subject || 'N/A'}</td>
+                            <td><strong>${req.answerScript?.totalMarks || 'Not Evaluated'}</strong></td>
+                            <td><span class="status status-progress">In Progress</span></td>
+                            <td>
+                                <button onclick="openModal(${req.revaluationId}, ${req.answerScript?.totalMarks || 0})">
+                                    <i class="fas fa-edit"></i> Submit Marks
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody>树皮';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading pending requests:', error);
+                document.getElementById('pendingList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading requests</p></div>';
+            }
+        }
+        
+        async function loadCompletedRequests() {
+            try {
+                const response = await fetch('/revaluator/requests');
+                const allRequests = await response.json();
+                const completed = allRequests.filter(r => r.revaluationStatus === 'REVALUATION_COMPLETED');
+                const container = document.getElementById('completedList');
+                
+                if (completed.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No completed revaluations</p></div>';
+                    return;
+                }
+                
+                let html = '\\\\.<thead>运转<th>Request ID</th><th>Script ID</th><th>Student</th><th>Subject</th><th>Original Marks</th><th>New Marks</th><th>Completed On</th></thead><tbody>';
+                completed.forEach(req => {
+                    html += `
+                        <tr>
+                            <td>#${req.revaluationId}</td>
+                            <td>#${req.answerScript?.scriptId || 'N/A'}</td>
+                            <td>${req.student?.name || 'N/A'}</td>
+                            <td>${req.answerScript?.exam?.subject || 'N/A'}</td>
+                            <td><span style="color: #dc2626;">${req.answerScript?.totalMarks || 'N/A'}</span></td>
+                            <td><span style="color: #059669; font-weight: bold;">${req.answerScript?.totalMarks || 'N/A'}</span></td>
+                            <td>${new Date().toLocaleDateString()}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody>表';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading completed requests:', error);
+            }
+        }
+        
+        function openModal(requestId, currentMarks) {
+            currentRequestId = requestId;
+            document.getElementById('modalRequestId').textContent = requestId;
+            document.getElementById('modalCurrentMarks').textContent = currentMarks || 'Not Evaluated';
+            document.getElementById('newMarks').value = currentMarks || '';
+            document.getElementById('comments').value = '';
+            document.getElementById('marksModal').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('marksModal').style.display = 'none';
+            currentRequestId = null;
+        }
+        
+        async function submitMarks() {
+            const newMarks = document.getElementById('newMarks').value;
+            const comments = document.getElementById('comments').value;
+            
+            if (!newMarks || newMarks < 0) {
+                alert('Please enter valid marks');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/revaluator/requests/${currentRequestId}/submit?marks=${newMarks}&comments=${encodeURIComponent(comments)}`, {
+                    method: 'PUT'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ ${result.message}\nMarks updated from ${result.oldMarks} to ${result.newMarks}`);
+                    closeModal();
+                    loadPendingRequests();
+                    loadCompletedRequests();
+                    loadStats();
+                } else {
+                    alert('❌ Error: ' + (result.message || 'Failed to submit marks'));
+                }
+            } catch (error) {
+                alert('❌ Network error. Please try again.');
+            }
+        }
+        
+        function showSection(sectionName) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById(sectionName).style.display = 'block';
+            
+            document.querySelectorAll('.nav a').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (sectionName === 'pending') loadPendingRequests();
+            if (sectionName === 'completed') loadCompletedRequests();
+        }
+        
+        loadStats();
+        loadPendingRequests();
+        loadCompletedRequests();
+        
+        setInterval(() => {
+            loadStats();
+            if (document.getElementById('pending').style.display !== 'none') loadPendingRequests();
+        }, 30000);
+    </script>
+</body>
+</html>
