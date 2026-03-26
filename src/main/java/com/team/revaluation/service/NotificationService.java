@@ -1,4 +1,3 @@
-// File: src/main/java/com/team/revaluation/service/NotificationService.java
 package com.team.revaluation.service;
 
 import com.team.revaluation.model.Notification;
@@ -16,31 +15,11 @@ import java.util.List;
 @Service
 public class NotificationService {
     
-    // ✅ Singleton instance
-    private static NotificationService instance;
-    
     @Autowired
     private NotificationRepository notificationRepository;
     
     // List of listeners (Observer pattern)
     private List<NotificationListener> listeners = new ArrayList<>();
-    
-    // ✅ Private constructor for Singleton
-    private NotificationService() {}
-    
-    // ✅ Public static method to get instance (called by Spring)
-    public static synchronized NotificationService getInstance() {
-        if (instance == null) {
-            instance = new NotificationService();
-        }
-        return instance;
-    }
-    
-    // ✅ Setter for Spring injection (called after instance creation)
-    @Autowired
-    public void setNotificationRepository(NotificationRepository notificationRepository) {
-        this.notificationRepository = notificationRepository;
-    }
     
     public interface NotificationListener {
         void onReviewStatusChanged(ReviewRequest request);

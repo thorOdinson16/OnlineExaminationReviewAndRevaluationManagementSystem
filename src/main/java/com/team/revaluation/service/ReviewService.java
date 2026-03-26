@@ -36,7 +36,7 @@ public class ReviewService {
         ReviewRequest newRequest = new ReviewRequestBuilder()
                 .withStudent(request.getStudent())
                 .withAnswerScript(request.getAnswerScript())
-                .withReviewFee(reviewFeeStrategy.calculateFee())
+                .withReviewFee(reviewFeeStrategy.calculateFee())  // Now using strategy pattern
                 .withReviewStatus("PAYMENT_PENDING")
                 .build();
         return reviewRequestRepository.save(newRequest);

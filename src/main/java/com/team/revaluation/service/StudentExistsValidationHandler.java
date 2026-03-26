@@ -3,7 +3,9 @@ package com.team.revaluation.service;
 import com.team.revaluation.model.Payment;
 import com.team.revaluation.model.Student;
 import com.team.revaluation.repository.UserRepository;
+import org.springframework.stereotype.Component;
 
+@Component
 public class StudentExistsValidationHandler extends PaymentValidationHandler {
     
     @Override

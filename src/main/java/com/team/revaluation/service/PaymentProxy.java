@@ -1,8 +1,11 @@
 package com.team.revaluation.service;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class PaymentProxy implements IPaymentGateway {
 
-    private final IPaymentGateway realGateway;
+    private IPaymentGateway realGateway;
 
     public PaymentProxy(IPaymentGateway realGateway) {
         this.realGateway = realGateway;

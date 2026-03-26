@@ -61,7 +61,7 @@ public class RevaluationService {
         RevaluationRequest request = new RevaluationRequest();
         request.setStudent(student);
         request.setAnswerScript(script);
-        request.setRevaluationFee(revaluationFeeStrategy.calculateFee());
+        request.setRevaluationFee(revaluationFeeStrategy.calculateFee());  // Now using strategy pattern
         request.setRevaluationStatus("PAYMENT_PENDING");
 
         RevaluationRequest savedRequest = revaluationRepo.save(request);

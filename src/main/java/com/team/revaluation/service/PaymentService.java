@@ -34,6 +34,12 @@ public class PaymentService {
     private IPaymentGateway paymentGateway;
     private PaymentValidationHandler validationChain;
     
+    @Autowired
+    private AmountValidationHandler amountValidationHandler;
+    
+    @Autowired
+    private StudentExistsValidationHandler studentExistsValidationHandler;
+    
     public PaymentService() {
         // Use decorator pattern - wrap the singleton gateway with logging decorator
         IPaymentGateway gateway = PaymentGatewaySingleton.getInstance();
@@ -41,13 +47,9 @@ public class PaymentService {
     }
     
     private void initializeValidationChain() {
-        AmountValidationHandler amountHandler = new AmountValidationHandler();
-        StudentExistsValidationHandler studentHandler = new StudentExistsValidationHandler();
-        
-        amountHandler.setNext(studentHandler);
-        studentHandler.setNext(scriptStatusValidationHandler);
-        
-        this.validationChain = amountHandler;
+        amountValidationHandler.setNext(studentExistsValidationHandler);
+        studentExistsValidationHandler.setNext(scriptStatusValidationHandler);
+        this.validationChain = amountValidationHandler;
     }
 
     @Transactional

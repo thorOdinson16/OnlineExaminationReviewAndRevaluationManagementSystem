@@ -2,7 +2,9 @@ package com.team.revaluation.service;
 
 import com.team.revaluation.model.Payment;
 import com.team.revaluation.repository.UserRepository;
+import org.springframework.stereotype.Component;
 
+@Component
 public class AmountValidationHandler extends PaymentValidationHandler {
     
     @Override
@@ -13,4 +15,4 @@ public class AmountValidationHandler extends PaymentValidationHandler {
         System.out.println("AmountValidationHandler: Valid amount ₹" + payment.getAmount());
         handleNext(payment, userRepository);
     }
-}   
+}
