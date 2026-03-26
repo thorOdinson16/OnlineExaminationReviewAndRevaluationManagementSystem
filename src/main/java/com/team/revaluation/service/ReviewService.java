@@ -73,6 +73,7 @@ public class ReviewService {
             AnswerScript script = request.getAnswerScript();
             if (script != null) {
                 try {
+                    // ✅ After payment success, transition to REVIEW_REQUESTED
                     com.team.revaluation.service.AnswerScriptStateMachine.transition(script, "REVIEW_REQUESTED");
                 } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
                     throw new RuntimeException("Invalid state transition: " + e.getMessage());

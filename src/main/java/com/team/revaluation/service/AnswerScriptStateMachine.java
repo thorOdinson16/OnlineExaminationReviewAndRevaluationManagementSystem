@@ -18,19 +18,19 @@ public class AnswerScriptStateMachine {
         addTransition("UNDER_EVALUATION", "EVALUATED");
         addTransition("EVALUATED", "RESULTS_PUBLISHED");
         
-        // Review flow with payment states
+        // ✅ Review flow: Payment first, then request (logical order)
         addTransition("EVALUATED", "REVIEW_PAYMENT_PENDING");
         addTransition("RESULTS_PUBLISHED", "REVIEW_PAYMENT_PENDING");
-        addTransition("REVIEW_PAYMENT_PENDING", "REVIEW_REQUESTED");
+        addTransition("REVIEW_PAYMENT_PENDING", "REVIEW_REQUESTED");  // After payment success
         addTransition("REVIEW_PAYMENT_PENDING", "AWAIT_STUDENT_DECISION");
         addTransition("REVIEW_REQUESTED", "REVIEW_IN_PROGRESS");
         addTransition("REVIEW_IN_PROGRESS", "REVIEW_COMPLETED");
         addTransition("REVIEW_COMPLETED", "RESULTS_PUBLISHED");
         
-        // Revaluation flow with payment states
+        // ✅ Revaluation flow: Payment first, then request
         addTransition("EVALUATED", "REVALUATION_PAYMENT_PENDING");
         addTransition("RESULTS_PUBLISHED", "REVALUATION_PAYMENT_PENDING");
-        addTransition("REVALUATION_PAYMENT_PENDING", "REVALUATION_REQUESTED");
+        addTransition("REVALUATION_PAYMENT_PENDING", "REVALUATION_REQUESTED");  // After payment success
         addTransition("REVALUATION_PAYMENT_PENDING", "AWAIT_STUDENT_DECISION");
         addTransition("REVALUATION_REQUESTED", "REVALUATION_IN_PROGRESS");
         addTransition("REVALUATION_IN_PROGRESS", "REVALUATION_COMPLETED");

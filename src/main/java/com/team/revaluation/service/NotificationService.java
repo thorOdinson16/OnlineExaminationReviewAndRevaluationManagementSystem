@@ -8,45 +8,18 @@ import com.team.revaluation.repository.NotificationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Service
+@Service  // ✅ Spring manages this as a singleton - no need for manual Singleton pattern
 public class NotificationService {
-    
-    // ✅ Singleton instance
-    private static NotificationService instance;
     
     @Autowired
     private NotificationRepository notificationRepository;
     
     // List of listeners (Observer pattern)
     private List<NotificationListener> listeners = new ArrayList<>();
-    
-    // ✅ Private constructor for Singleton
-    private NotificationService() {}
-    
-    // ✅ Public static method to get instance
-    public static synchronized NotificationService getInstance() {
-        if (instance == null) {
-            instance = new NotificationService();
-        }
-        return instance;
-    }
-    
-    // ✅ Setter for Spring injection (called after instance creation)
-    @Autowired
-    public void setNotificationRepository(NotificationRepository notificationRepository) {
-        this.notificationRepository = notificationRepository;
-    }
-    
-    // ✅ PostConstruct to register this instance as the singleton
-    @PostConstruct
-    public void init() {
-        instance = this;
-    }
     
     public interface NotificationListener {
         void onReviewStatusChanged(ReviewRequest request);

@@ -47,13 +47,13 @@ public class PaymentService {
         // ✅ Create real gateway
         IPaymentGateway realGateway = PaymentGatewaySingleton.getInstance();
         
-        // ✅ Wrap with Proxy for input validation
+        // ✅ Wrap with Proxy for input validation (Proxy pattern)
         IPaymentGateway proxyGateway = new PaymentProxy(realGateway);
         
-        // ✅ Wrap with Decorator for logging
+        // ✅ Wrap with Decorator for logging (Decorator pattern)
         this.paymentGateway = new PaymentLoggingDecorator(proxyGateway);
         
-        System.out.println("PaymentService initialized with Proxy + Decorator patterns");
+        System.out.println("PaymentService initialized with Proxy → Decorator → Gateway");
     }
     
     private void initializeValidationChain() {
@@ -84,7 +84,7 @@ public class PaymentService {
         PaymentProcessor processor = PaymentProcessorFactory.getPaymentProcessor(payment.getPaymentType());
         boolean processorSuccess = processor.process(payment);
         
-        // Process the transaction using the decorated and proxied gateway
+        // ✅ Process through Proxy + Decorator chain
         boolean gatewaySuccess = paymentGateway.processTransaction(payment.getAmount());
         
         // Update the database status based on the result

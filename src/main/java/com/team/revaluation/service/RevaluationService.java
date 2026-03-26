@@ -113,6 +113,7 @@ public class RevaluationService {
             AnswerScript script = request.getAnswerScript();
             if (script != null) {
                 try {
+                    // ✅ After payment success, transition to REVALUATION_REQUESTED
                     com.team.revaluation.service.AnswerScriptStateMachine.transition(script, "REVALUATION_REQUESTED");
                 } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
                     throw new RuntimeException("Invalid state transition: " + e.getMessage());
