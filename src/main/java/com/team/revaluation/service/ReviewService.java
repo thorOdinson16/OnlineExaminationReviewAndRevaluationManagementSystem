@@ -6,7 +6,7 @@ import com.team.revaluation.model.ReviewRequest;
 import com.team.revaluation.model.Payment;
 import com.team.revaluation.repository.ReviewRequestRepository;
 
-import main.java.com.team.revaluation.builder.ReviewRequestBuilder;
+import com.team.revaluation.builder.ReviewRequestBuilder;
 
 import com.team.revaluation.repository.AnswerScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;

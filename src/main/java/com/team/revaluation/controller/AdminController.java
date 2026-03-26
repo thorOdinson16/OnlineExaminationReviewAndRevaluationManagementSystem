@@ -9,8 +9,8 @@ import com.team.revaluation.model.User;
 import com.team.revaluation.model.Revaluator;
 import com.team.revaluation.service.ReviewService;
 
-import main.java.com.team.revaluation.exception.InvalidStateTransitionException;
-import main.java.com.team.revaluation.service.AnswerScriptStateMachine;
+import com.team.revaluation.exception.InvalidStateTransitionException;
+import com.team.revaluation.service.AnswerScriptStateMachine;
 
 import com.team.revaluation.service.RevaluationService;
 import com.team.revaluation.service.NotificationService;

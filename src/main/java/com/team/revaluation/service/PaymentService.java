@@ -1,4 +1,3 @@
-// File: src/main/java/com/team/revaluation/service/PaymentService.java
 package com.team.revaluation.service;
 
 import com.team.revaluation.factory.PaymentProcessorFactory;
@@ -8,8 +7,10 @@ import com.team.revaluation.model.Student;
 import com.team.revaluation.repository.NotificationRepository;
 import com.team.revaluation.repository.PaymentRepository;
 import com.team.revaluation.repository.UserRepository;
+import com.team.revaluation.repository.AnswerScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
@@ -24,40 +25,43 @@ public class PaymentService {
     @Autowired
     private UserRepository userRepository;
     
-    private IPaymentGateway paymentGateway;
+    @Autowired
+    private AnswerScriptRepository answerScriptRepository;
     
-    // Chain of Responsibility for payment validation
+    @Autowired
+    private ScriptStatusValidationHandler scriptStatusValidationHandler;
+    
+    private IPaymentGateway paymentGateway;
     private PaymentValidationHandler validationChain;
     
     public PaymentService() {
         // Use decorator pattern - wrap the singleton gateway with logging decorator
         IPaymentGateway gateway = PaymentGatewaySingleton.getInstance();
         this.paymentGateway = new PaymentLoggingDecorator(gateway);
-        
-        // Initialize validation chain
-        initializeValidationChain();
     }
     
     private void initializeValidationChain() {
         AmountValidationHandler amountHandler = new AmountValidationHandler();
         StudentExistsValidationHandler studentHandler = new StudentExistsValidationHandler();
-        ScriptStatusValidationHandler scriptHandler = new ScriptStatusValidationHandler();
-        GatewayValidationHandler gatewayHandler = new GatewayValidationHandler();
         
         amountHandler.setNext(studentHandler);
-        studentHandler.setNext(scriptHandler);
-        scriptHandler.setNext(gatewayHandler);
+        studentHandler.setNext(scriptStatusValidationHandler);
         
         this.validationChain = amountHandler;
     }
 
+    @Transactional
     public Payment processPayment(Payment payment) {
+        // Initialize validation chain if not already done
+        if (validationChain == null) {
+            initializeValidationChain();
+        }
+        
         // Run through validation chain
         try {
             validationChain.handle(payment, userRepository);
         } catch (RuntimeException e) {
             payment.setPaymentStatus("FAILED");
-            // Store error message in a separate field or log it
             System.err.println("Payment validation failed: " + e.getMessage());
             return paymentRepository.save(payment);
         }

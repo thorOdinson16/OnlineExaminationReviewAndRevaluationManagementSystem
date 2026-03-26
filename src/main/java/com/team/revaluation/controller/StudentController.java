@@ -1,4 +1,3 @@
-// File: src/main/java/com/team/revaluation/controller/StudentController.java
 package com.team.revaluation.controller;
 
 import com.team.revaluation.model.AnswerScript;
@@ -43,19 +42,44 @@ public class StudentController {
     @PostMapping("/review/apply")
     public ResponseEntity<Map<String, Object>> applyForReview(@RequestBody Map<String, Object> request) {
         try {
-            Long studentId = ((Number) request.get("studentId")).longValue();
+            Long studentId = null;
+            Long scriptId = null;
             
-            // Fix: Properly parameterize the inner Map
-            @SuppressWarnings("unchecked")
-            Map<String, Object> answerScriptMap = (Map<String, Object>) request.get("answerScript");
-            Long scriptId = ((Number) answerScriptMap.get("scriptId")).longValue();
+            // Safely extract studentId
+            if (request.get("studentId") != null) {
+                studentId = ((Number) request.get("studentId")).longValue();
+            } else if (request.get("student") != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> studentMap = (Map<String, Object>) request.get("student");
+                if (studentMap.get("userId") != null) {
+                    studentId = ((Number) studentMap.get("userId")).longValue();
+                }
+            }
+            
+            // Safely extract scriptId
+            if (request.get("scriptId") != null) {
+                scriptId = ((Number) request.get("scriptId")).longValue();
+            } else if (request.get("answerScript") != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> answerScriptMap = (Map<String, Object>) request.get("answerScript");
+                if (answerScriptMap.get("scriptId") != null) {
+                    scriptId = ((Number) answerScriptMap.get("scriptId")).longValue();
+                }
+            }
+            
+            if (studentId == null || scriptId == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Missing required fields");
+                error.put("message", "studentId and scriptId are required");
+                return ResponseEntity.badRequest().body(error);
+            }
             
             Map<String, Object> result = examReviewFacade.applyAndPay(studentId, scriptId);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
             error.put("error", e.getMessage());
-            error.put("message", "Failed to apply for review");
+            error.put("message", "Failed to apply for review: " + e.getMessage());
             return ResponseEntity.badRequest().body(error);
         }
     }
@@ -95,7 +119,11 @@ public class StudentController {
     public ResponseEntity<RevaluationRequest> applyForRevaluation(
             @RequestParam Long scriptId, 
             @RequestParam Long studentId) {
-        return ResponseEntity.ok(revaluationService.applyForRevaluation(scriptId, studentId));
+        try {
+            return ResponseEntity.ok(revaluationService.applyForRevaluation(scriptId, studentId));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to apply for revaluation: " + e.getMessage());
+        }
     }
 
     // Get specific revaluation by ID
@@ -167,7 +195,7 @@ public class StudentController {
     
     // Get unread notifications for student
     @GetMapping("/notifications/{studentId}")
-    public ResponseEntity<List<com.team.revaluation.model.Notification>> getUnreadNotifications(
+    public ResponseEntity<List<Notification>> getUnreadNotifications(
             @PathVariable Long studentId) {
         return ResponseEntity.ok(paymentService.getUnreadNotifications(studentId));
     }
