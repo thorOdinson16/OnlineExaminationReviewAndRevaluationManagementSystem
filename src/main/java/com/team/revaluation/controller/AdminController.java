@@ -2,11 +2,16 @@
 package com.team.revaluation.controller;
 
 import com.team.revaluation.model.AnswerScript;
+import com.team.revaluation.model.Evaluator;
 import com.team.revaluation.model.ReviewRequest;
 import com.team.revaluation.model.RevaluationRequest;
 import com.team.revaluation.model.User;
 import com.team.revaluation.model.Revaluator;
 import com.team.revaluation.service.ReviewService;
+
+import main.java.com.team.revaluation.exception.InvalidStateTransitionException;
+import main.java.com.team.revaluation.service.AnswerScriptStateMachine;
+
 import com.team.revaluation.service.RevaluationService;
 import com.team.revaluation.service.NotificationService;
 import com.team.revaluation.repository.AnswerScriptRepository;
@@ -67,35 +72,43 @@ public class AdminController {
     // ==================== EVALUATOR ASSIGNMENT ====================
     
     // Assign evaluator to script
+    // Replace the existing assignEvaluator method with this one
+
     @PostMapping("/evaluator/assign")
     public ResponseEntity<Map<String, Object>> assignEvaluator(
             @RequestParam Long scriptId,
             @RequestParam Long evaluatorId) {
-        
+
         AnswerScript script = answerScriptRepository.findById(scriptId)
                 .orElseThrow(() -> new RuntimeException("Script not found"));
-        
+
         User evaluator = userRepository.findById(evaluatorId)
                 .orElseThrow(() -> new RuntimeException("Evaluator not found"));
-        
+
         if (!"EVALUATOR".equals(evaluator.getRole())) {
             throw new RuntimeException("User is not an evaluator");
         }
-        
-        // Update script with evaluator and transition status
-        script.setStatus("UNDER_EVALUATION");
+
+        // Use state machine to transition (only allowed from SUBMITTED)
+        try {
+            AnswerScriptStateMachine.transition(script, "UNDER_EVALUATION");
+        } catch (InvalidStateTransitionException e) {
+            throw new RuntimeException("Cannot assign evaluator: " + e.getMessage());
+        }
+
+        script.setEvaluator((Evaluator) evaluator);
         AnswerScript updatedScript = answerScriptRepository.save(script);
-        
-        // Notify evaluator (in real system, would notify the evaluator)
+
+        // Notify evaluator (optional)
         notificationService.notifyStudent(null, "Script #" + scriptId + " assigned for evaluation to " + evaluator.getName());
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Evaluator assigned successfully");
         response.put("scriptId", scriptId);
         response.put("evaluatorId", evaluatorId);
         response.put("evaluatorName", evaluator.getName());
         response.put("status", "UNDER_EVALUATION");
-        
+
         return ResponseEntity.ok(response);
     }
     

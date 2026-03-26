@@ -26,4 +26,10 @@ public class AnswerScript {
     @ManyToOne
     @JoinColumn(name = "exam_id")
     private Exam exam;
+
+    // Inside AnswerScript.java, add:
+
+    @ManyToOne
+    @JoinColumn(name = "evaluator_id")
+    private Evaluator evaluator;
 }

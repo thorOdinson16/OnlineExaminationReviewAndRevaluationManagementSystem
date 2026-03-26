@@ -5,6 +5,9 @@ import com.team.revaluation.model.AnswerScript;
 import com.team.revaluation.model.ReviewRequest;
 import com.team.revaluation.model.Payment;
 import com.team.revaluation.repository.ReviewRequestRepository;
+
+import main.java.com.team.revaluation.builder.ReviewRequestBuilder;
+
 import com.team.revaluation.repository.AnswerScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,12 +30,16 @@ public class ReviewService {
     private NotificationService notificationService;
 
     @Transactional
+    
     public ReviewRequest applyForReview(ReviewRequest request) {
-        // Use Strategy Pattern to set fee
-        FeeCalculationStrategy feeStrategy = new ReviewFeeStrategy();
-        request.setReviewFee(feeStrategy.calculateFee());
-        request.setReviewStatus("PAYMENT_PENDING");
-        return reviewRequestRepository.save(request);
+        // Use the builder to construct the new request
+        ReviewRequest newRequest = new ReviewRequestBuilder()
+                .withStudent(request.getStudent())
+                .withAnswerScript(request.getAnswerScript())
+                .withReviewFee(new ReviewFeeStrategy().calculateFee())
+                .withReviewStatus("PAYMENT_PENDING")
+                .build();
+        return reviewRequestRepository.save(newRequest);
     }
 
     public ReviewRequest getReviewById(Long reviewId) {
