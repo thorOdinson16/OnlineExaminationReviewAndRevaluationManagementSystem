@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Admin - User Management | Exam Review System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: white;
+            padding: 25px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #2c3e50;
+        }
+
+        .header h1 i {
+            color: #3498db;
+            margin-right: 10px;
+        }
+
+        .nav {
+            background: white;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 10px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav a {
+            color: #475569;
+            padding: 12px 24px;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 40px;
+            transition: all 0.3s ease;
+        }
+
+        .nav a:hover, .nav a.active {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .stat-card i {
+            font-size: 32px;
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+
+        .stat-card h3 {
+            font-size: 28px;
+            color: #2c3e50;
+        }
+
+        .stat-card p {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab-btn {
+            background: none;
+            color: #64748b;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .tab-btn:hover, .tab-btn.active {
+            color: #3498db;
+            border-bottom: 2px solid #3498db;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .role-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .role-student {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+
+        .role-evaluator {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .role-revaluator {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .role-admin {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        button {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        button.delete {
+            background: #e74c3c;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            width: 400px;
+            max-width: 90%;
+        }
+
+        .modal-content input, .modal-content select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        @media (max-width: 768px) {
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 8px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-users"></i> Admin - User Management</h1>
+        <p>Manage system users</p>
+    </div>
+
+    <div class="nav">
+        <a href="/admin/dashboard">Dashboard</a>
+        <a href="/admin/results">Results Management</a>
+        <a href="/view/admin/reviews">Review Requests</a>
+        <a href="/view/admin/revaluations">Revaluation Requests</a>
+        <a href="/view/admin/users" class="active">User Management</a>
+        <a href="/login" onclick="logout()">Logout</a>
+    </div>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card" onclick="filterByRole('STUDENT')">
+                <i class="fas fa-user-graduate"></i>
+                <h3 id="studentCount">0</h3>
+                <p>Students</p>
+            </div>
+            <div class="stat-card" onclick="filterByRole('EVALUATOR')">
+                <i class="fas fa-chalkboard-user"></i>
+                <h3 id="evaluatorCount">0</h3>
+                <p>Evaluators</p>
+            </div>
+            <div class="stat-card" onclick="filterByRole('REVALUATOR')">
+                <i class="fas fa-user-check"></i>
+                <h3 id="revaluatorCount">0</h3>
+                <p>Revaluators</p>
+            </div>
+            <div class="stat-card" onclick="filterByRole('ADMIN')">
+                <i class="fas fa-user-shield"></i>
+                <h3 id="adminCount">0</h3>
+                <p>Admins</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><i class="fas fa-list"></i> Users</h2>
+            
+            <div class="tabs">
+                <button class="tab-btn active" onclick="loadUsers('ALL')">All Users</button>
+                <button class="tab-btn" onclick="loadUsers('STUDENT')">Students</button>
+                <button class="tab-btn" onclick="loadUsers('EVALUATOR')">Evaluators</button>
+                <button class="tab-btn" onclick="loadUsers('REVALUATOR')">Revaluators</button>
+                <button class="tab-btn" onclick="loadUsers('ADMIN')">Admins</button>
+                <button class="tab-btn" onclick="openAddUserModal()" style="background: #3498db; color: white; margin-left: auto;">+ Add User</button>
+            </div>
+            
+            <div id="usersList"></div>
+        </div>
+    </div>
+
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <h3>Add New User</h3>
+            <input type="text" id="userName" placeholder="Full Name">
+            <input type="email" id="userEmail" placeholder="Email">
+            <input type="password" id="userPassword" placeholder="Password">
+            <select id="userRole">
+                <option value="STUDENT">Student</option>
+                <option value="EVALUATOR">Evaluator</option>
+                <option value="REVALUATOR">Revaluator</option>
+                <option value="ADMIN">Admin</option>
+            </select>
+            <div id="specializationField" style="display: none;">
+                <input type="text" id="specialization" placeholder="Specialization (for Revaluator)">
+            </div>
+            <div id="departmentField" style="display: none;">
+                <input type="text" id="department" placeholder="Department (for Evaluator)">
+            </div>
+            <button onclick="addUser()">Add User</button>
+            <button onclick="closeAddUserModal()" style="background: #64748b;">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let currentFilter = 'ALL';
+
+        function logout() {
+            localStorage.removeItem('userId');
+            localStorage.removeItem('role');
+            localStorage.removeItem('userName');
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/admin/users/stats');
+                const stats = await response.json();
+                document.getElementById('studentCount').textContent = stats.students || 0;
+                document.getElementById('evaluatorCount').textContent = stats.evaluators || 0;
+                document.getElementById('revaluatorCount').textContent = stats.revaluators || 0;
+                document.getElementById('adminCount').textContent = stats.admins || 0;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadUsers(role) {
+            currentFilter = role;
+            try {
+                let url = '/admin/users';
+                if (role !== 'ALL') {
+                    url += `?role=${role}`;
+                }
+                const response = await fetch(url);
+                const users = await response.json();
+                const container = document.getElementById('usersList');
+                
+                if (users.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No users found</p></div>';
+                    return;
+                }
+                
+                let html = '\\\\.<thead>运转<th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Details</th><th>Action</th></thead><tbody>';
+                
+                users.forEach(user => {
+                    let roleClass = '';
+                    if (user.role === 'STUDENT') roleClass = 'role-student';
+                    else if (user.role === 'EVALUATOR') roleClass = 'role-evaluator';
+                    else if (user.role === 'REVALUATOR') roleClass = 'role-revaluator';
+                    else roleClass = 'role-admin';
+                    
+                    let details = '';
+                    if (user.role === 'STUDENT') {
+                        details = `USN: ${user.usn || 'N/A'} | Section: ${user.section || 'N/A'}`;
+                    } else if (user.role === 'EVALUATOR') {
+                        details = `Department: ${user.department || 'N/A'}`;
+                    } else if (user.role === 'REVALUATOR') {
+                        details = `Specialization: ${user.specialization || 'N/A'}`;
+                    } else {
+                        details = `Admin Code: ${user.adminCode || 'N/A'}`;
+                    }
+                    
+                    html += ` 
+                        <tr>
+                            <td>#${user.userId}</td>
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td><span class="role-badge ${roleClass}">${user.role}</span></td>
+                            <td>${details}</td>
+                            <td>
+                                <button class="delete" onclick="deleteUser(${user.userId})">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody>树皮';
+                container.innerHTML = html;
+                
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.classList.add('active');
+                
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading users</p></div>';
+            }
+        }
+        
+        function filterByRole(role) {
+            loadUsers(role);
+        }
+        
+        function openAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'flex';
+            
+            document.getElementById('userRole').addEventListener('change', function() {
+                const role = this.value;
+                document.getElementById('specializationField').style.display = role === 'REVALUATOR' ? 'block' : 'none';
+                document.getElementById('departmentField').style.display = role === 'EVALUATOR' ? 'block' : 'none';
+            });
+        }
+        
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'none';
+            document.getElementById('userName').value = '';
+            document.getElementById('userEmail').value = '';
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userRole').value = 'STUDENT';
+            document.getElementById('specializationField').style.display = 'none';
+            document.getElementById('departmentField').style.display = 'none';
+        }
+        
+        async function addUser() {
+            const name = document.getElementById('userName').value;
+            const email = document.getElementById('userEmail').value;
+            const password = document.getElementById('userPassword').value;
+            const role = document.getElementById('userRole').value;
+            
+            if (!name || !email || !password) {
+                alert('Please fill all required fields');
+                return;
+            }
+            
+            const requestBody = { name, email, password, role };
+            
+            if (role === 'REVALUATOR') {
+                requestBody.specialization = document.getElementById('specialization').value;
+            }
+            if (role === 'EVALUATOR') {
+                requestBody.department = document.getElementById('department').value;
+            }
+            
+            try {
+                const response = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ User added successfully!');
+                    closeAddUserModal();
+                    loadUsers(currentFilter);
+                    loadStats();
+                } else {
+                    alert('❌ Error: ' + (result.error || 'Failed to add user'));
+                }
+            } catch (error) {
+                alert('❌ Network error. Please try again.');
+            }
+        }
+        
+        async function deleteUser(userId) {
+            if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+                try {
+                    const response = await fetch(`/admin/users/${userId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        alert('✅ User deleted successfully!');
+                        loadUsers(currentFilter);
+                        loadStats();
+                    } else {
+                        const result = await response.json();
+                        alert('❌ Error: ' + (result.message || 'Failed to delete user'));
+                    }
+                } catch (error) {
+                    alert('❌ Network error. Please try again.');
+                }
+            }
+        }
+        
+        loadStats();
+        loadUsers('ALL');
+    </script>
+</body>
+</html>

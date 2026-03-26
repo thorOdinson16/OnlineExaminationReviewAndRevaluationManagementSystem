@@ -1,4 +1,3 @@
-// File: src/main/java/com/team/revaluation/service/ReviewService.java
 package com.team.revaluation.service;
 
 import com.team.revaluation.model.AnswerScript;
@@ -8,6 +7,7 @@ import com.team.revaluation.repository.ReviewRequestRepository;
 import com.team.revaluation.builder.ReviewRequestBuilder;
 import com.team.revaluation.repository.AnswerScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -28,15 +28,15 @@ public class ReviewService {
     private NotificationService notificationService;
 
     @Autowired
-    private FeeCalculationStrategy reviewFeeStrategy;  // ✅ Injected strategy
+    @Qualifier("reviewFeeStrategy")
+    private FeeCalculationStrategy reviewFeeStrategy;
 
     @Transactional
     public ReviewRequest applyForReview(ReviewRequest request) {
-        // Use the builder to construct the new request with injected strategy
         ReviewRequest newRequest = new ReviewRequestBuilder()
                 .withStudent(request.getStudent())
                 .withAnswerScript(request.getAnswerScript())
-                .withReviewFee(reviewFeeStrategy.calculateFee())  // ✅ Using injected strategy
+                .withReviewFee(reviewFeeStrategy.calculateFee())
                 .withReviewStatus("PAYMENT_PENDING")
                 .build();
         return reviewRequestRepository.save(newRequest);
@@ -69,7 +69,6 @@ public class ReviewService {
             
             AnswerScript script = request.getAnswerScript();
             if (script != null) {
-                // ✅ Use state machine instead of direct setStatus
                 try {
                     com.team.revaluation.service.AnswerScriptStateMachine.transition(script, "REVIEW_REQUESTED");
                 } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
@@ -164,7 +163,6 @@ public class ReviewService {
         return updatedRequest;
     }
     
-    // ✅ New method for admin to verify review
     @Transactional
     public ReviewRequest verifyReview(Long reviewId) {
         return updateReviewStatus(reviewId, "VERIFIED");

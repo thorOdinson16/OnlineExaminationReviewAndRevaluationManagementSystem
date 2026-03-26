@@ -9,6 +9,8 @@ import com.team.revaluation.repository.RevaluationRequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.List;  // ✅ Add this import
+
 @Component
 public class ScriptStatusValidationHandler extends PaymentValidationHandler {
     

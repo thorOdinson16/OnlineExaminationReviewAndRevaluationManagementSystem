@@ -6,12 +6,12 @@ public interface FeeCalculationStrategy {
     Float calculateFee();
 }
 
-@Component
+@Component("reviewFeeStrategy")
 class ReviewFeeStrategy implements FeeCalculationStrategy {
     public Float calculateFee() { return 500.0f; }
 }
 
-@Component
+@Component("fullRevaluationFeeStrategy")
 class FullRevaluationFeeStrategy implements FeeCalculationStrategy {
     public Float calculateFee() { return 1500.0f; }
 }

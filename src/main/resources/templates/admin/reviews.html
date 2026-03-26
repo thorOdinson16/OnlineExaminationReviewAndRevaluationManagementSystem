@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Admin - Review Requests | Exam Review System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: white;
+            padding: 25px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #2c3e50;
+        }
+
+        .header h1 i {
+            color: #3498db;
+            margin-right: 10px;
+        }
+
+        .nav {
+            background: white;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 10px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav a {
+            color: #475569;
+            padding: 12px 24px;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 40px;
+            transition: all 0.3s ease;
+        }
+
+        .nav a:hover, .nav a.active {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab-btn {
+            background: none;
+            color: #64748b;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .tab-btn:hover {
+            color: #3498db;
+        }
+
+        .tab-btn.active {
+            color: #3498db;
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #3498db;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .status-success {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .status-progress {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+
+        .status-completed {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        button {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 0 4px;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+
+        button.verify {
+            background: #27ae60;
+        }
+
+        button.reject {
+            background: #e74c3c;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            width: 400px;
+            max-width: 90%;
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: inherit;
+        }
+
+        @media (max-width: 768px) {
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-file-alt"></i> Admin - Review Requests</h1>
+        <p>Manage student paper review requests</p>
+    </div>
+
+    <div class="nav">
+        <a href="/admin/dashboard">Dashboard</a>
+        <a href="/admin/results">Results Management</a>
+        <a href="/view/admin/reviews" class="active">Review Requests</a>
+        <a href="/view/admin/revaluations">Revaluation Requests</a>
+        <a href="/view/admin/users">User Management</a>
+        <a href="/login" onclick="logout()">Logout</a>
+    </div>
+
+    <div class="container">
+        <div class="section">
+            <h2><i class="fas fa-clipboard-list"></i> Review Requests</h2>
+            
+            <div class="tabs">
+                <button class="tab-btn active" onclick="loadRequests('PENDING')">Pending (Payment Pending)</button>
+                <button class="tab-btn" onclick="loadRequests('PAYMENT_SUCCESS')">Payment Success</button>
+                <button class="tab-btn" onclick="loadRequests('IN_PROGRESS')">In Progress</button>
+                <button class="tab-btn" onclick="loadRequests('COMPLETED')">Completed</button>
+                <button class="tab-btn" onclick="loadRequests('REJECTED')">Rejected</button>
+            </div>
+            
+            <div id="requestsList"></div>
+        </div>
+    </div>
+
+    <div id="rejectModal" class="modal">
+        <div class="modal-content">
+            <h3>Reject Review Request</h3>
+            <p>Request ID: <strong id="rejectRequestId"></strong></p>
+            <textarea id="rejectionReason" rows="3" placeholder="Reason for rejection"></textarea>
+            <button onclick="confirmReject()">Submit Rejection</button>
+            <button onclick="closeRejectModal()" style="background: #64748b;">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let currentRequestId = null;
+        let currentAction = null;
+
+        function logout() {
+            localStorage.removeItem('userId');
+            localStorage.removeItem('role');
+            localStorage.removeItem('userName');
+        }
+
+        async function loadRequests(status) {
+            try {
+                let url = '/admin/reviews';
+                if (status !== 'PENDING') {
+                    url = `/admin/reviews?status=${status}`;
+                } else {
+                    url = '/admin/reviews/pending';
+                }
+                
+                const response = await fetch(url);
+                const requests = await response.json();
+                const container = document.getElementById('requestsList');
+                
+                if (requests.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No review requests found</p></div>';
+                    return;
+                }
+                
+                let html = '<table><thead><tr><th>Request ID</th><th>Student</th><th>Script ID</th><th>Subject</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+                
+                requests.forEach(req => {
+                    let statusClass = '';
+                    let statusText = req.reviewStatus || 'PENDING';
+                    
+                    if (statusText === 'PAYMENT_PENDING') {
+                        statusClass = 'status-pending';
+                        statusText = 'Payment Pending';
+                    } else if (statusText === 'PAYMENT_SUCCESS') {
+                        statusClass = 'status-success';
+                        statusText = 'Payment Success';
+                    } else if (statusText === 'IN_PROGRESS') {
+                        statusClass = 'status-progress';
+                        statusText = 'In Progress';
+                    } else if (statusText === 'COMPLETED') {
+                        statusClass = 'status-completed';
+                        statusText = 'Completed';
+                    } else {
+                        statusClass = 'status-pending';
+                    }
+                    
+                    let action = '';
+                    if (req.reviewStatus === 'PAYMENT_PENDING') {
+                        action = `<button class="verify" onclick="verifyRequest(${req.reviewId})">Verify & Approve</button>
+                                  <button class="reject" onclick="openRejectModal(${req.reviewId})">Reject</button>`;
+                    } else if (req.reviewStatus === 'PAYMENT_SUCCESS') {
+                        action = `<button onclick="startReview(${req.reviewId})">Start Review</button>`;
+                    } else if (req.reviewStatus === 'IN_PROGRESS') {
+                        action = `<button onclick="completeReview(${req.reviewId})">Mark Complete</button>`;
+                    } else {
+                        action = '<span style="color: #64748b;">-</span>';
+                    }
+                    
+                    html += `<tr>
+                        <td>#${req.reviewId}</td>
+                        <td>${req.student?.name || 'N/A'}</td>
+                        <td>#${req.answerScript?.scriptId || 'N/A'}</td>
+                        <td>${req.answerScript?.exam?.subject || 'N/A'}</td>
+                        <td>₹${req.reviewFee}</td>
+                        <td><span class="status ${statusClass}">${statusText}</span></td>
+                        <td>${action}</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                
+                // Update active tab styling
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.classList.add('active');
+                
+            } catch (error) {
+                console.error('Error loading requests:', error);
+                document.getElementById('requestsList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading requests</p></div>';
+            }
+        }
+        
+        async function verifyRequest(requestId) {
+            if (confirm(`Verify and approve review request #${requestId}?`)) {
+                try {
+                    const response = await fetch(`/admin/reviews/${requestId}/verify`, {
+                        method: 'PUT'
+                    });
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        alert('✅ Review request verified successfully!');
+                        loadRequests('PENDING');
+                    } else {
+                        alert('❌ Error: ' + (result.message || 'Failed to verify'));
+                    }
+                } catch (error) {
+                    alert('❌ Network error. Please try again.');
+                }
+            }
+        }
+        
+        async function startReview(requestId) {
+            if (confirm(`Start review for request #${requestId}?`)) {
+                try {
+                    const response = await fetch(`/admin/reviews/${requestId}/status?status=IN_PROGRESS`, {
+                        method: 'PUT'
+                    });
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        alert('✅ Review started successfully!');
+                        loadRequests('PAYMENT_SUCCESS');
+                    } else {
+                        alert('❌ Error: ' + (result.message || 'Failed to start review'));
+                    }
+                } catch (error) {
+                    alert('❌ Network error. Please try again.');
+                }
+            }
+        }
+        
+        async function completeReview(requestId) {
+            if (confirm(`Mark review as complete for request #${requestId}?`)) {
+                try {
+                    const response = await fetch(`/admin/reviews/${requestId}/status?status=COMPLETED`, {
+                        method: 'PUT'
+                    });
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        alert('✅ Review marked as completed!');
+                        loadRequests('IN_PROGRESS');
+                    } else {
+                        alert('❌ Error: ' + (result.message || 'Failed to complete review'));
+                    }
+                } catch (error) {
+                    alert('❌ Network error. Please try again.');
+                }
+            }
+        }
+        
+        function openRejectModal(requestId) {
+            currentRequestId = requestId;
+            document.getElementById('rejectRequestId').textContent = requestId;
+            document.getElementById('rejectionReason').value = '';
+            document.getElementById('rejectModal').style.display = 'flex';
+        }
+        
+        function closeRejectModal() {
+            document.getElementById('rejectModal').style.display = 'none';
+            currentRequestId = null;
+        }
+        
+        async function confirmReject() {
+            const reason = document.getElementById('rejectionReason').value;
+            if (!reason) {
+                alert('Please provide a reason for rejection');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/reviews/${currentRequestId}/status?status=REJECTED`, {
+                    method: 'PUT'
+                });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ Review request rejected');
+                    closeRejectModal();
+                    loadRequests('PENDING');
+                } else {
+                    alert('❌ Error: ' + (result.message || 'Failed to reject'));
+                }
+            } catch (error) {
+                alert('❌ Network error. Please try again.');
+            }
+        }
+        
+        // Load pending requests by default
+        loadRequests('PENDING');
+    </script>
+</body>
+</html>

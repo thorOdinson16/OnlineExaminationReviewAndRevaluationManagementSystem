@@ -8,6 +8,7 @@ import com.team.revaluation.repository.AnswerScriptRepository;
 import com.team.revaluation.repository.RevaluationRequestRepository;
 import com.team.revaluation.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +33,8 @@ public class RevaluationService {
     private PaymentService paymentService;
 
     @Autowired
-    private FeeCalculationStrategy revaluationFeeStrategy;  // ✅ Injected strategy
+    @Qualifier("fullRevaluationFeeStrategy")
+    private FeeCalculationStrategy revaluationFeeStrategy;
 
     @Transactional
     public RevaluationRequest applyForRevaluation(Long scriptId, Long studentId) {
@@ -59,7 +61,7 @@ public class RevaluationService {
         RevaluationRequest request = new RevaluationRequest();
         request.setStudent(student);
         request.setAnswerScript(script);
-        request.setRevaluationFee(revaluationFeeStrategy.calculateFee());  // ✅ Using injected strategy
+        request.setRevaluationFee(revaluationFeeStrategy.calculateFee());
         request.setRevaluationStatus("PAYMENT_PENDING");
 
         RevaluationRequest savedRequest = revaluationRepo.save(request);
@@ -109,7 +111,6 @@ public class RevaluationService {
 
             AnswerScript script = request.getAnswerScript();
             if (script != null) {
-                // ✅ Use state machine instead of direct setStatus
                 try {
                     com.team.revaluation.service.AnswerScriptStateMachine.transition(script, "REVALUATION_REQUESTED");
                 } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {

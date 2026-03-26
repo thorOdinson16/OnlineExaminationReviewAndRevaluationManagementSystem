@@ -9,6 +9,7 @@ import com.team.revaluation.service.ReviewService;
 import com.team.revaluation.service.PaymentService;
 import com.team.revaluation.model.Payment;
 import com.team.revaluation.facade.ExamReviewFacade;
+import com.team.revaluation.model.Notification;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
