@@ -14,6 +14,8 @@ public class EvaluatorService {
 
     @Autowired
     private AnswerScriptRepository answerScriptRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     /**
      * Returns all scripts that are pending evaluation (status = UNDER_EVALUATION).
@@ -64,5 +66,58 @@ public class EvaluatorService {
 
         AnswerScriptStateMachine.transition(script, "RESULTS_PUBLISHED");
         return answerScriptRepository.save(script);
+    }
+
+
+    /**
+     * Assign an evaluator to a script for evaluation.
+     * Contains all business logic for evaluator assignment.
+     */
+    @Transactional
+    public Map<String, Object> assignEvaluatorToScript(Long scriptId, Long evaluatorId) {
+        // Validate script exists
+        AnswerScript script = answerScriptRepository.findById(scriptId)
+                .orElseThrow(() -> new RuntimeException("Script not found with id: " + scriptId));
+
+        // Validate evaluator exists
+        User user = userRepository.findById(evaluatorId)
+                .orElseThrow(() -> new RuntimeException("Evaluator not found with id: " + evaluatorId));
+
+        if (!"EVALUATOR".equals(user.getRole())) {
+            throw new RuntimeException("User is not an evaluator");
+        }
+
+        // Safe cast to Evaluator
+        Evaluator evaluator;
+        if (user instanceof Evaluator) {
+            evaluator = (Evaluator) user;
+        } else {
+            evaluator = (Evaluator) userRepository.findById(evaluatorId)
+                    .orElseThrow(() -> new RuntimeException("Evaluator not found"));
+            if (!(evaluator instanceof Evaluator)) {
+                throw new RuntimeException("User is not an evaluator instance");
+            }
+        }
+
+        // Use state machine to transition (only allowed from SUBMITTED)
+        try {
+            AnswerScriptStateMachine.transition(script, "UNDER_EVALUATION");
+        } catch (InvalidStateTransitionException e) {
+            throw new RuntimeException("Cannot assign evaluator: " + e.getMessage());
+        }
+
+        // Assign evaluator and save
+        script.setEvaluator(evaluator);
+        AnswerScript updatedScript = answerScriptRepository.save(script);
+
+        // Build response
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Evaluator assigned successfully");
+        response.put("scriptId", scriptId);
+        response.put("evaluatorId", evaluatorId);
+        response.put("evaluatorName", evaluator.getName());
+        response.put("status", "UNDER_EVALUATION");
+
+        return response;
     }
 }

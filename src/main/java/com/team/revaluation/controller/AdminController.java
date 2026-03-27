@@ -78,56 +78,15 @@ public class AdminController {
     }
 
     // ==================== EVALUATOR ASSIGNMENT ====================
-    
-    // Assign evaluator to script
+    // Assign evaluator to script - now delegates to service
     @PostMapping("/evaluator/assign")
     public ResponseEntity<Map<String, Object>> assignEvaluator(
             @RequestParam Long scriptId,
             @RequestParam Long evaluatorId) {
 
-        AnswerScript script = answerScriptRepository.findById(scriptId)
-                .orElseThrow(() -> new RuntimeException("Script not found"));
-
-        User user = userRepository.findById(evaluatorId)
-                .orElseThrow(() -> new RuntimeException("Evaluator not found"));
-
-        if (!"EVALUATOR".equals(user.getRole())) {
-            throw new RuntimeException("User is not an evaluator");
-        }
-
-        // ✅ Safe cast - check if user is actually an Evaluator instance
-        Evaluator evaluator;
-        if (user instanceof Evaluator) {
-            evaluator = (Evaluator) user;
-        } else {
-            // If JPA inheritance returns base User, we need to fetch the Evaluator separately
-            evaluator = (Evaluator) userRepository.findById(evaluatorId)
-                    .orElseThrow(() -> new RuntimeException("Evaluator not found"));
-            if (!(evaluator instanceof Evaluator)) {
-                throw new RuntimeException("User is not an evaluator instance");
-            }
-        }
-
-        // Use state machine to transition (only allowed from SUBMITTED)
-        try {
-            AnswerScriptStateMachine.transition(script, "UNDER_EVALUATION");
-        } catch (InvalidStateTransitionException e) {
-            throw new RuntimeException("Cannot assign evaluator: " + e.getMessage());
-        }
-
-        script.setEvaluator(evaluator);
-        AnswerScript updatedScript = answerScriptRepository.save(script);
-
-        // Notify evaluator
-        notificationService.notifyStudent(null, "Script #" + scriptId + " assigned for evaluation to " + evaluator.getName());
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Evaluator assigned successfully");
-        response.put("scriptId", scriptId);
-        response.put("evaluatorId", evaluatorId);
-        response.put("evaluatorName", evaluator.getName());
-        response.put("status", "UNDER_EVALUATION");
-
+        // Delegate to service - keeps controller clean
+        Map<String, Object> response = evaluatorService.assignEvaluatorToScript(scriptId, evaluatorId);
+        
         return ResponseEntity.ok(response);
     }
     
