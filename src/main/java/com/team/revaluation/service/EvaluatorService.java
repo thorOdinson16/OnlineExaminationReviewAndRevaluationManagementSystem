@@ -2,13 +2,17 @@ package com.team.revaluation.service;
 
 import com.team.revaluation.exception.InvalidStateTransitionException;
 import com.team.revaluation.model.AnswerScript;
+import com.team.revaluation.model.Evaluator;
+import com.team.revaluation.model.User;
 import com.team.revaluation.repository.AnswerScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.team.revaluation.repository.UserRepository;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class EvaluatorService {
