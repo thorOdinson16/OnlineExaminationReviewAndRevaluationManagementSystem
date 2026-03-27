@@ -18,9 +18,9 @@ public class NotificationLogger implements NotificationService.NotificationListe
     
     @PostConstruct
     public void registerListener() {
-        // ✅ Register this listener with the NotificationService
+        // Register this listener with the NotificationService
         notificationService.addListener(this);
-        System.out.println("✅ NotificationLogger registered as observer");
+        System.out.println("✅ NotificationLogger registered as observer with Singleton NotificationService");
     }
     
     @Override

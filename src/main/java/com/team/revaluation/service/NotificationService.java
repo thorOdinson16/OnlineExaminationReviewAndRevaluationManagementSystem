@@ -12,11 +12,37 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Service  // ✅ Spring manages this as a singleton - no need for manual Singleton pattern
+/**
+ * Singleton pattern implemented with private constructor and static getInstance method.
+ * Spring manages this as a bean, but we explicitly demonstrate the Singleton pattern.
+ */
+@Service
 public class NotificationService {
+    
+    // 1. Private static instance (Singleton pattern)
+    private static NotificationService instance;
     
     @Autowired
     private NotificationRepository notificationRepository;
+    
+    // 2. Private constructor to prevent instantiation
+    private NotificationService() {
+        System.out.println("NotificationService (Singleton) initialized.");
+    }
+    
+    // 3. Public static method to get the single instance
+    public static synchronized NotificationService getInstance() {
+        if (instance == null) {
+            instance = new NotificationService();
+        }
+        return instance;
+    }
+    
+    // Allow Spring to set the repository after instance creation
+    @Autowired
+    public void setNotificationRepository(NotificationRepository repository) {
+        this.notificationRepository = repository;
+    }
     
     // List of listeners (Observer pattern)
     private List<NotificationListener> listeners = new ArrayList<>();

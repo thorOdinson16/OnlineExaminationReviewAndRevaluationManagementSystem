@@ -41,17 +41,18 @@ public class PaymentService {
     private GatewayValidationHandler gatewayValidationHandler;
     
     private IPaymentGateway paymentGateway;
+    private PaymentProxy paymentProxy;
     private PaymentValidationHandler validationChain;
     
     public PaymentService() {
         // ✅ Create real gateway
         IPaymentGateway realGateway = PaymentGatewaySingleton.getInstance();
         
-        // ✅ Wrap with Proxy for input validation (Proxy pattern)
-        IPaymentGateway proxyGateway = new PaymentProxy(realGateway);
+        // ✅ Create Proxy with validation (will be configured with student later)
+        this.paymentProxy = new PaymentProxy(realGateway);
         
-        // ✅ Wrap with Decorator for logging (Decorator pattern)
-        this.paymentGateway = new PaymentLoggingDecorator(proxyGateway);
+        // ✅ Wrap Proxy with Decorator for logging (Decorator pattern)
+        this.paymentGateway = new PaymentLoggingDecorator(paymentProxy);
         
         System.out.println("PaymentService initialized with Proxy → Decorator → Gateway");
     }
@@ -80,7 +81,10 @@ public class PaymentService {
             return paymentRepository.save(payment);
         }
         
-        // Get appropriate payment processor using Abstract Factory
+        // ✅ Set student in Proxy for validation
+        paymentProxy.setStudent(payment.getStudent());
+        
+        // Get appropriate payment processor using Factory
         PaymentProcessor processor = PaymentProcessorFactory.getPaymentProcessor(payment.getPaymentType());
         boolean processorSuccess = processor.process(payment);
         

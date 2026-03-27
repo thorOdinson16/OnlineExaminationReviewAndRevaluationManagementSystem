@@ -236,4 +236,66 @@ public class RevaluationService {
 
         return savedRequest;
     }
+
+    /**
+     * Submit revaluation marks - contains all business logic for revaluation completion
+     * This moves logic out of the controller as required by MVC architecture.
+     */
+    @Transactional
+    public RevaluationRequest submitRevaluationMarks(Long revaluationId, Float marks, String comments) {
+        // Validate request exists
+        RevaluationRequest request = revaluationRepo.findById(revaluationId)
+                .orElseThrow(() -> new RuntimeException("Revaluation request not found with id: " + revaluationId));
+
+        // Validate status
+        if (!"REVALUATION_IN_PROGRESS".equals(request.getRevaluationStatus())) {
+            throw new RuntimeException("Cannot submit marks. Request is in status: " + 
+                request.getRevaluationStatus() + ". Expected: REVALUATION_IN_PROGRESS");
+        }
+
+        // Validate marks
+        if (marks == null || marks < 0) {
+            throw new RuntimeException("Invalid marks: " + marks + ". Marks must be non-negative.");
+        }
+
+        // Get the answer script
+        AnswerScript script = request.getAnswerScript();
+        if (script == null) {
+            throw new RuntimeException("Answer script not found for revaluation request #" + revaluationId);
+        }
+
+        // Store old marks for notification
+        Float oldMarks = script.getTotalMarks();
+
+        // Update marks
+        script.setTotalMarks(marks);
+
+        // Use state machine for transition
+        try {
+            AnswerScriptStateMachine.transition(script, "REVALUATION_COMPLETED");
+        } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
+            throw new RuntimeException("Invalid state transition: " + e.getMessage());
+        }
+
+        // Save updated script
+        answerScriptRepository.save(script);
+
+        // Update revaluation request status
+        request.setRevaluationStatus("REVALUATION_COMPLETED");
+        RevaluationRequest savedRequest = revaluationRepo.save(request);
+
+        // Send notifications
+        String notificationMessage = String.format(
+            "✅ Revaluation completed for Script #%d. Marks updated from %.2f to %.2f.%s",
+            script.getScriptId(), 
+            oldMarks != null ? oldMarks : 0, 
+            marks,
+            comments != null ? " Comments: " + comments : ""
+        );
+        
+        notificationService.notifyStudent(request.getStudent(), notificationMessage);
+        notificationService.notifyRevaluationStatusChange(savedRequest);
+
+        return savedRequest;
+    }
 }

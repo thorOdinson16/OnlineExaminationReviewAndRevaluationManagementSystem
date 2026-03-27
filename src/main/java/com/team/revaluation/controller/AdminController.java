@@ -152,7 +152,7 @@ public class AdminController {
         return ResponseEntity.ok(revaluationService.updateRevaluationStatus(id, "VERIFIED"));
     }
     
-    // Assign revaluator to revaluation request
+    // Assign revaluator to revaluation request (updated with state machine)
     @PostMapping("/revaluator/assign")
     public ResponseEntity<Map<String, Object>> assignRevaluator(
             @RequestParam Long revaluationId,
@@ -160,6 +160,15 @@ public class AdminController {
         
         RevaluationRequest request = revaluationRequestRepository.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
+        
+        // ✅ Validate current status - must be VERIFIED or PAYMENT_SUCCESS
+        String currentStatus = request.getRevaluationStatus();
+        if (!"VERIFIED".equals(currentStatus) && !"PAYMENT_SUCCESS".equals(currentStatus)) {
+            throw new RuntimeException(
+                "Cannot assign revaluator. Request is in status: " + currentStatus + 
+                ". Expected: VERIFIED or PAYMENT_SUCCESS"
+            );
+        }
         
         User revaluator = userRepository.findById(revaluatorId)
                 .orElseThrow(() -> new RuntimeException("Revaluator not found"));
@@ -170,6 +179,23 @@ public class AdminController {
         
         request.setRevaluator((Revaluator) revaluator);
         request.setRevaluationStatus("REVALUATION_IN_PROGRESS");
+        
+        // ✅ Update the AnswerScript status using state machine
+        AnswerScript script = request.getAnswerScript();
+        if (script != null) {
+            try {
+                // Only transition if currently in eligible state
+                if ("REVALUATION_REQUESTED".equals(script.getStatus()) || 
+                    "RESULTS_PUBLISHED".equals(script.getStatus())) {
+                    AnswerScriptStateMachine.transition(script, "REVALUATION_IN_PROGRESS");
+                    answerScriptRepository.save(script);
+                }
+            } catch (InvalidStateTransitionException e) {
+                // Log but don't block assignment - revaluation request already updated
+                System.err.println("Warning: Could not update script status: " + e.getMessage());
+            }
+        }
+        
         RevaluationRequest updatedRequest = revaluationRequestRepository.save(request);
         
         // Notify student about assignment
@@ -182,6 +208,7 @@ public class AdminController {
         response.put("revaluatorId", revaluatorId);
         response.put("revaluatorName", revaluator.getName());
         response.put("status", "REVALUATION_IN_PROGRESS");
+        response.put("scriptStatus", script != null ? script.getStatus() : "N/A");
         
         return ResponseEntity.ok(response);
     }

@@ -1,13 +1,11 @@
 package com.team.revaluation.controller;
 
 import com.team.revaluation.model.RevaluationRequest;
-import com.team.revaluation.model.AnswerScript;
-import com.team.revaluation.repository.RevaluationRequestRepository;
-import com.team.revaluation.repository.AnswerScriptRepository;
-import com.team.revaluation.service.NotificationService;
+import com.team.revaluation.service.RevaluationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,90 +15,55 @@ import java.util.Map;
 public class RevaluatorController {
 
     @Autowired
-    private RevaluationRequestRepository revaluationRequestRepository;
-    
-    @Autowired
-    private AnswerScriptRepository answerScriptRepository;
-    
-    @Autowired
-    private NotificationService notificationService;
+    private RevaluationService revaluationService;
 
     @GetMapping("/requests")
     public ResponseEntity<List<RevaluationRequest>> getAllRequests() {
-        List<RevaluationRequest> requests = revaluationRequestRepository.findByRevaluationStatus("REVALUATION_IN_PROGRESS");
-        return ResponseEntity.ok(requests);
-    }
-    
-    @GetMapping("/requests/pending")
-    public ResponseEntity<List<RevaluationRequest>> getPendingRequests() {
-        List<RevaluationRequest> requests = revaluationRequestRepository.findByRevaluationStatus("REVALUATION_IN_PROGRESS");
-        return ResponseEntity.ok(requests);
-    }
-    
-    @GetMapping("/requests/{id}")
-    public ResponseEntity<RevaluationRequest> getRequestById(@PathVariable Long id) {
-        RevaluationRequest request = revaluationRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
-        return ResponseEntity.ok(request);
+        return ResponseEntity.ok(revaluationService.getPendingForRevaluator());
     }
 
-    // ✅ Fixed: Use REVALUATION_COMPLETED instead of COMPLETED
+    @GetMapping("/requests/pending")
+    public ResponseEntity<List<RevaluationRequest>> getPendingRequests() {
+        return ResponseEntity.ok(revaluationService.getPendingForRevaluator());
+    }
+
+    @GetMapping("/requests/{id}")
+    public ResponseEntity<RevaluationRequest> getRequestById(@PathVariable Long id) {
+        return ResponseEntity.ok(revaluationService.getRevaluationById(id));
+    }
+
+    /**
+     * Submit revaluation marks - delegates all business logic to service layer
+     */
     @PutMapping("/requests/{id}/submit")
     public ResponseEntity<Map<String, Object>> submitRevaluationMarks(
             @PathVariable Long id,
             @RequestParam Float marks,
             @RequestParam(required = false) String comments) {
-        
-        RevaluationRequest request = revaluationRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
-        
-        if (!"REVALUATION_IN_PROGRESS".equals(request.getRevaluationStatus())) {
-            throw new RuntimeException("Cannot submit marks. Request is in status: " + request.getRevaluationStatus());
-        }
-        
-        AnswerScript script = request.getAnswerScript();
-        Float oldMarks = script.getTotalMarks();
-        script.setTotalMarks(marks);
-        
-        // ✅ Use state machine with correct status
-        try {
-            com.team.revaluation.service.AnswerScriptStateMachine.transition(script, "REVALUATION_COMPLETED");
-        } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
-            throw new RuntimeException("Invalid state transition: " + e.getMessage());
-        }
-        answerScriptRepository.save(script);
-        
-        // ✅ Use correct status REVALUATION_COMPLETED
-        request.setRevaluationStatus("REVALUATION_COMPLETED");
-        RevaluationRequest savedRequest = revaluationRequestRepository.save(request);
-        
-        notificationService.notifyStudent(request.getStudent(), 
-            String.format("✅ Revaluation completed for Script #%d. Marks updated from %.2f to %.2f. %s",
-                script.getScriptId(), oldMarks, marks, 
-                comments != null ? "Comments: " + comments : ""));
-        notificationService.notifyRevaluationStatusChange(savedRequest);
-        
+
+        RevaluationRequest savedRequest = revaluationService.submitRevaluationMarks(id, marks, comments);
+
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Revaluation marks submitted successfully");
         response.put("requestId", id);
-        response.put("scriptId", script.getScriptId());
-        response.put("oldMarks", oldMarks);
+        response.put("scriptId", savedRequest.getAnswerScript().getScriptId());
+        response.put("oldMarks", savedRequest.getAnswerScript().getTotalMarks());
         response.put("newMarks", marks);
-        response.put("status", "REVALUATION_COMPLETED");
-        
+        response.put("status", savedRequest.getRevaluationStatus());
+
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/dashboard/stats")
     public ResponseEntity<Map<String, Object>> getDashboardStats() {
-        List<RevaluationRequest> pending = revaluationRequestRepository.findByRevaluationStatus("REVALUATION_IN_PROGRESS");
-        List<RevaluationRequest> completed = revaluationRequestRepository.findByRevaluationStatus("REVALUATION_COMPLETED");
-        
+        long pending = revaluationService.countByStatus("REVALUATION_IN_PROGRESS");
+        long completed = revaluationService.countByStatus("REVALUATION_COMPLETED");
+
         Map<String, Object> stats = new HashMap<>();
-        stats.put("pendingCount", pending.size());
-        stats.put("completedCount", completed.size());
-        stats.put("totalCount", pending.size() + completed.size());
-        
+        stats.put("pendingCount", pending);
+        stats.put("completedCount", completed);
+        stats.put("totalCount", pending + completed);
+
         return ResponseEntity.ok(stats);
     }
 }
