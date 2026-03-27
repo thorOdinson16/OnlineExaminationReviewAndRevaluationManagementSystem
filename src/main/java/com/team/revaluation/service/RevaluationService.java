@@ -1,5 +1,6 @@
 package com.team.revaluation.service;
 
+import com.team.revaluation.exception.InvalidStateTransitionException;
 import com.team.revaluation.model.AnswerScript;
 import com.team.revaluation.model.RevaluationRequest;
 import com.team.revaluation.model.Student;
@@ -13,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 public class RevaluationService {
@@ -61,9 +64,10 @@ public class RevaluationService {
         RevaluationRequest request = new RevaluationRequest();
         request.setStudent(student);
         request.setAnswerScript(script);
-        // ✅ Use strategy pattern for fee calculation
         request.setRevaluationFee(revaluationFeeStrategy.calculateFee());
-        request.setRevaluationStatus("PAYMENT_PENDING");
+        
+        // ✅ Use state machine
+        RevaluationRequestStateMachine.transition(request, "PAYMENT_PENDING");
 
         RevaluationRequest savedRequest = revaluationRepo.save(request);
 
@@ -108,14 +112,14 @@ public class RevaluationService {
         Payment processedPayment = paymentService.processPayment(payment);
 
         if ("SUCCESS".equals(processedPayment.getPaymentStatus())) {
-            request.setRevaluationStatus("PAYMENT_SUCCESS");
+            // ✅ Use state machine
+            RevaluationRequestStateMachine.transition(request, "PAYMENT_SUCCESS");
 
             AnswerScript script = request.getAnswerScript();
             if (script != null) {
                 try {
-                    // ✅ After payment success, transition to REVALUATION_REQUESTED
-                    com.team.revaluation.service.AnswerScriptStateMachine.transition(script, "REVALUATION_REQUESTED");
-                } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
+                    AnswerScriptStateMachine.transition(script, "REVALUATION_REQUESTED");
+                } catch (InvalidStateTransitionException e) {
                     throw new RuntimeException("Invalid state transition: " + e.getMessage());
                 }
                 answerScriptRepository.save(script);
@@ -128,7 +132,8 @@ public class RevaluationService {
 
             return savedRequest;
         } else {
-            request.setRevaluationStatus("PAYMENT_FAILED");
+            // ✅ Use state machine
+            RevaluationRequestStateMachine.transition(request, "PAYMENT_FAILED");
             notificationService.notifyStudent(request.getStudent(),
                 "❌ Payment failed for revaluation request #" + revaluationId + ". Please try again.");
             return revaluationRepo.save(request);
@@ -140,47 +145,9 @@ public class RevaluationService {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
 
-        String currentStatus = request.getRevaluationStatus();
-
-        boolean isValidTransition = false;
-
-        switch (currentStatus) {
-            case "PAYMENT_PENDING":
-                isValidTransition = newStatus.equals("PAYMENT_SUCCESS") || 
-                                    newStatus.equals("PAYMENT_FAILED") || 
-                                    newStatus.equals("CANCELLED");
-                break;
-            case "PAYMENT_SUCCESS":
-                isValidTransition = newStatus.equals("VERIFIED") || 
-                                    newStatus.equals("REJECTED");
-                break;
-            case "VERIFIED":
-                isValidTransition = newStatus.equals("REVALUATION_IN_PROGRESS");
-                break;
-            case "REVALUATION_IN_PROGRESS":
-                isValidTransition = newStatus.equals("REVALUATION_COMPLETED");
-                break;
-            case "REVALUATION_COMPLETED":
-                isValidTransition = false;
-                break;
-            case "CANCELLED":
-                isValidTransition = false;
-                break;
-            case "REJECTED":
-                isValidTransition = false;
-                break;
-            case "PAYMENT_FAILED":
-                isValidTransition = newStatus.equals("PAYMENT_PENDING") || newStatus.equals("CANCELLED");
-                break;
-            default:
-                isValidTransition = false;
-        }
-
-        if (!isValidTransition) {
-            throw new RuntimeException("Invalid state transition from " + currentStatus + " to " + newStatus);
-        }
-
-        request.setRevaluationStatus(newStatus);
+        // ✅ Use state machine instead of manual validation
+        RevaluationRequestStateMachine.transition(request, newStatus);
+        
         RevaluationRequest updatedRequest = revaluationRepo.save(request);
         notificationService.notifyRevaluationStatusChange(updatedRequest);
 
@@ -209,7 +176,7 @@ public class RevaluationService {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
 
-        request.setRevaluationStatus("REJECTED");
+        RevaluationRequestStateMachine.transition(request, "REJECTED");
         request.setRejectionReason(reason);
         RevaluationRequest savedRequest = revaluationRepo.save(request);
 
@@ -224,11 +191,7 @@ public class RevaluationService {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
 
-        if (!"PAYMENT_PENDING".equals(request.getRevaluationStatus())) {
-            throw new RuntimeException("Cannot cancel revaluation request in status: " + request.getRevaluationStatus());
-        }
-
-        request.setRevaluationStatus("CANCELLED");
+        RevaluationRequestStateMachine.transition(request, "CANCELLED");
         RevaluationRequest savedRequest = revaluationRepo.save(request);
 
         notificationService.notifyStudent(request.getStudent(),
@@ -237,54 +200,41 @@ public class RevaluationService {
         return savedRequest;
     }
 
-    /**
-     * Submit revaluation marks - contains all business logic for revaluation completion
-     * This moves logic out of the controller as required by MVC architecture.
-     */
     @Transactional
     public RevaluationRequest submitRevaluationMarks(Long revaluationId, Float marks, String comments) {
-        // Validate request exists
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found with id: " + revaluationId));
 
-        // Validate status
+        // ✅ Validate status via state machine check
         if (!"REVALUATION_IN_PROGRESS".equals(request.getRevaluationStatus())) {
             throw new RuntimeException("Cannot submit marks. Request is in status: " + 
                 request.getRevaluationStatus() + ". Expected: REVALUATION_IN_PROGRESS");
         }
 
-        // Validate marks
         if (marks == null || marks < 0) {
             throw new RuntimeException("Invalid marks: " + marks + ". Marks must be non-negative.");
         }
 
-        // Get the answer script
         AnswerScript script = request.getAnswerScript();
         if (script == null) {
             throw new RuntimeException("Answer script not found for revaluation request #" + revaluationId);
         }
 
-        // Store old marks for notification
         Float oldMarks = script.getTotalMarks();
-
-        // Update marks
         script.setTotalMarks(marks);
 
-        // Use state machine for transition
         try {
             AnswerScriptStateMachine.transition(script, "REVALUATION_COMPLETED");
-        } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
+        } catch (InvalidStateTransitionException e) {
             throw new RuntimeException("Invalid state transition: " + e.getMessage());
         }
 
-        // Save updated script
         answerScriptRepository.save(script);
 
-        // Update revaluation request status
-        request.setRevaluationStatus("REVALUATION_COMPLETED");
+        // ✅ Use state machine
+        RevaluationRequestStateMachine.transition(request, "REVALUATION_COMPLETED");
         RevaluationRequest savedRequest = revaluationRepo.save(request);
 
-        // Send notifications
         String notificationMessage = String.format(
             "✅ Revaluation completed for Script #%d. Marks updated from %.2f to %.2f.%s",
             script.getScriptId(), 
@@ -297,5 +247,59 @@ public class RevaluationService {
         notificationService.notifyRevaluationStatusChange(savedRequest);
 
         return savedRequest;
+    }
+    
+    @Transactional
+    public Map<String, Object> assignRevaluatorToRequest(Long revaluationId, Long revaluatorId) {
+        RevaluationRequest request = revaluationRepo.findById(revaluationId)
+                .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
+        
+        // ✅ Validate current status using state machine allowed transitions
+        if (!RevaluationRequestStateMachine.isTransitionAllowed(request.getRevaluationStatus(), "REVALUATION_IN_PROGRESS")) {
+            throw new RuntimeException(
+                "Cannot assign revaluator. Request is in status: " + request.getRevaluationStatus()
+            );
+        }
+        
+        User user = userRepository.findById(revaluatorId)
+                .orElseThrow(() -> new RuntimeException("Revaluator not found"));
+        
+        if (!"REVALUATOR".equals(user.getRole())) {
+            throw new RuntimeException("User is not a revaluator");
+        }
+        
+        Revaluator revaluator = (Revaluator) user;
+        request.setRevaluator(revaluator);
+        
+        // ✅ Use state machine
+        RevaluationRequestStateMachine.transition(request, "REVALUATION_IN_PROGRESS");
+        
+        AnswerScript script = request.getAnswerScript();
+        if (script != null) {
+            try {
+                if ("REVALUATION_REQUESTED".equals(script.getStatus()) || 
+                    "RESULTS_PUBLISHED".equals(script.getStatus())) {
+                    AnswerScriptStateMachine.transition(script, "REVALUATION_IN_PROGRESS");
+                    answerScriptRepository.save(script);
+                }
+            } catch (InvalidStateTransitionException e) {
+                System.err.println("Warning: Could not update script status: " + e.getMessage());
+            }
+        }
+        
+        RevaluationRequest updatedRequest = revaluationRepo.save(request);
+        
+        notificationService.notifyStudent(request.getStudent(),
+            "Revaluation request #" + revaluationId + " assigned to revaluator: " + revaluator.getName());
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Revaluator assigned successfully");
+        response.put("revaluationId", revaluationId);
+        response.put("revaluatorId", revaluatorId);
+        response.put("revaluatorName", revaluator.getName());
+        response.put("status", updatedRequest.getRevaluationStatus());
+        response.put("scriptStatus", script != null ? script.getStatus() : "N/A");
+        
+        return response;
     }
 }
