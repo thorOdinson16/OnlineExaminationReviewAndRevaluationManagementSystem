@@ -1,22 +1,10 @@
 // File: src/main/java/com/team/revaluation/controller/AdminController.java
 package com.team.revaluation.controller;
 
-import com.team.revaluation.model.AnswerScript;
-import com.team.revaluation.model.Evaluator;
-import com.team.revaluation.model.ReviewRequest;
-import com.team.revaluation.model.RevaluationRequest;
-import com.team.revaluation.model.User;
-import com.team.revaluation.model.Revaluator;
-import com.team.revaluation.service.ReviewService;
-
+import com.team.revaluation.model.*;
+import com.team.revaluation.service.*;
 import com.team.revaluation.exception.InvalidStateTransitionException;
-import com.team.revaluation.service.AnswerScriptStateMachine;
-
-import com.team.revaluation.service.RevaluationService;
-import com.team.revaluation.service.NotificationService;
-import com.team.revaluation.repository.AnswerScriptRepository;
-import com.team.revaluation.repository.UserRepository;
-import com.team.revaluation.repository.RevaluationRequestRepository;
+import com.team.revaluation.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -46,22 +34,22 @@ public class AdminController {
     
     @Autowired
     private RevaluationRequestRepository revaluationRequestRepository;
+    
+    @Autowired
+    private EvaluatorService evaluatorService;  // ✅ Fixed: Added missing dependency
 
     // ==================== REVIEW MANAGEMENT ====================
     
-    // View all review requests
     @GetMapping("/reviews")
     public ResponseEntity<List<ReviewRequest>> getAllReviews() {
         return ResponseEntity.ok(reviewService.getAllReviews());
     }
     
-    // Get pending reviews for verification (PAYMENT_PENDING status)
     @GetMapping("/reviews/pending")
     public ResponseEntity<List<ReviewRequest>> getPendingReviews() {
         return ResponseEntity.ok(reviewService.getPendingReviews());
     }
 
-    // Verify / update review request status
     @PutMapping("/reviews/{reviewId}/status")
     public ResponseEntity<ReviewRequest> updateReviewStatus(
             @PathVariable Long reviewId,
@@ -69,50 +57,39 @@ public class AdminController {
         return ResponseEntity.ok(reviewService.updateReviewStatus(reviewId, status));
     }
     
-    // Verify a review request (admin approval)
     @PutMapping("/reviews/{reviewId}/verify")
     public ResponseEntity<ReviewRequest> verifyReview(@PathVariable Long reviewId) {
-        // This transitions from PAYMENT_PENDING → VERIFIED → IN_PROGRESS
         ReviewRequest verified = reviewService.verifyReview(reviewId);
         return ResponseEntity.ok(verified);
     }
 
     // ==================== EVALUATOR ASSIGNMENT ====================
-    // Assign evaluator to script - now delegates to service
     @PostMapping("/evaluator/assign")
     public ResponseEntity<Map<String, Object>> assignEvaluator(
             @RequestParam Long scriptId,
             @RequestParam Long evaluatorId) {
 
-        // Delegate to service - keeps controller clean
         Map<String, Object> response = evaluatorService.assignEvaluatorToScript(scriptId, evaluatorId);
-        
         return ResponseEntity.ok(response);
     }
     
     // ==================== REVALUATION MANAGEMENT ====================
     
-    // Get all revaluation requests
     @GetMapping("/revaluations")
     public ResponseEntity<List<RevaluationRequest>> getAllRevaluations() {
         return ResponseEntity.ok(revaluationService.getAllRevaluations());
     }
     
-    // Get pending revaluation requests
     @GetMapping("/revaluations/pending")
     public ResponseEntity<List<RevaluationRequest>> getPendingRevaluations() {
         return ResponseEntity.ok(revaluationService.getPendingRevaluations());
     }
     
-    // Verify revaluation request
     @PutMapping("/revaluations/{id}/verify")
-    public ResponseEntity<RevaluationRequest> verifyRevaluation(
-            @PathVariable Long id) {
+    public ResponseEntity<RevaluationRequest> verifyRevaluation(@PathVariable Long id) {
         return ResponseEntity.ok(revaluationService.updateRevaluationStatus(id, "VERIFIED"));
     }
     
-    // Assign revaluator to revaluation request (updated with state machine)
-    // Assign revaluator to revaluation request - delegates to service
     @PostMapping("/revaluator/assign")
     public ResponseEntity<Map<String, Object>> assignRevaluator(
             @RequestParam Long revaluationId,
@@ -124,13 +101,11 @@ public class AdminController {
     
     // ==================== FINAL RESULT MANAGEMENT ====================
     
-    // Publish results - sets script status to RESULTS_PUBLISHED
     @PutMapping("/results/{scriptId}/publish")
     public ResponseEntity<Map<String, Object>> publishResult(@PathVariable Long scriptId) {
         AnswerScript script = answerScriptRepository.findById(scriptId)
                 .orElseThrow(() -> new RuntimeException("Script not found"));
         
-        // Validate current status
         if (!"EVALUATED".equals(script.getStatus()) && !"REVIEW_COMPLETED".equals(script.getStatus())) {
             throw new RuntimeException("Cannot publish results. Script is in status: " + script.getStatus());
         }
@@ -142,7 +117,6 @@ public class AdminController {
         }
         AnswerScript updatedScript = answerScriptRepository.save(script);
         
-        // Notify student about result publication
         if (script.getStudent() != null) {
             notificationService.notifyStudent(script.getStudent(),
                 String.format("📢 Results published for Script #%d. Final marks: %.2f", 
@@ -159,7 +133,6 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
     
-    // Finalize result - sets status to FINALIZED (no further changes allowed)
     @PutMapping("/results/{scriptId}/finalize")
     public ResponseEntity<Map<String, Object>> finalizeResult(
             @PathVariable Long scriptId,
@@ -168,18 +141,15 @@ public class AdminController {
         AnswerScript script = answerScriptRepository.findById(scriptId)
                 .orElseThrow(() -> new RuntimeException("Script not found"));
         
-        // Validate that result can be finalized (must be published first)
         if (!"RESULTS_PUBLISHED".equals(script.getStatus()) && 
             !"REVALUATION_COMPLETED".equals(script.getStatus())) {
             throw new RuntimeException("Cannot finalize results. Script is in status: " + script.getStatus());
         }
         
-        // Update final marks if provided
         if (finalMarks != null) {
             script.setTotalMarks(finalMarks);
         }
         
-        // Set status to FINALIZED (terminal state)
         try {
             AnswerScriptStateMachine.transition(script, "FINALIZED");
         } catch (InvalidStateTransitionException e) {
@@ -187,7 +157,6 @@ public class AdminController {
         }
         AnswerScript finalizedScript = answerScriptRepository.save(script);
         
-        // Notify student about finalization
         if (script.getStudent() != null) {
             notificationService.notifyStudent(script.getStudent(),
                 String.format("🏆 Results finalized for Script #%d. Final marks: %.2f (No further changes allowed)", 
@@ -205,7 +174,6 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
     
-    // Bulk publish results for multiple scripts
     @PutMapping("/results/bulk-publish")
     public ResponseEntity<Map<String, Object>> bulkPublishResults(@RequestBody List<Long> scriptIds) {
         int published = 0;
@@ -225,7 +193,6 @@ public class AdminController {
                     answerScriptRepository.save(script);
                     published++;
                     
-                    // Notify student
                     if (script.getStudent() != null) {
                         notificationService.notifyStudent(script.getStudent(),
                             "Results published for Script #" + scriptId);
@@ -246,7 +213,6 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
     
-    // Get result statistics
     @GetMapping("/results/stats")
     public ResponseEntity<Map<String, Object>> getResultStats() {
         List<AnswerScript> allScripts = answerScriptRepository.findAll();
@@ -266,7 +232,6 @@ public class AdminController {
         return ResponseEntity.ok(stats);
     }
     
-    // Get dashboard overview
     @GetMapping("/dashboard/overview")
     public ResponseEntity<Map<String, Object>> getDashboardOverview() {
         List<ReviewRequest> pendingReviews = reviewService.getPendingReviews();
@@ -281,5 +246,93 @@ public class AdminController {
         overview.put("scriptsUnderEvaluation", scriptsUnderEvaluation.size());
         
         return ResponseEntity.ok(overview);
+    }
+
+    // ==================== USER MANAGEMENT ENDPOINTS (NEW) ====================
+    
+    /**
+     * Get all users or filter by role
+     * GET /admin/users?role=STUDENT (optional)
+     */
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> getUsers(@RequestParam(required = false) String role) {
+        List<User> users;
+        if (role != null && !role.isEmpty() && !"ALL".equals(role)) {
+            // Filter by role - need to fetch all and filter since JPA doesn't have findByRole
+            users = userRepository.findAll().stream()
+                    .filter(u -> u.getRole().equals(role))
+                    .toList();
+        } else {
+            users = userRepository.findAll();
+        }
+        return ResponseEntity.ok(users);
+    }
+    
+    /**
+     * Get user statistics by role
+     * GET /admin/users/stats
+     */
+    @GetMapping("/users/stats")
+    public ResponseEntity<Map<String, Long>> getUserStats() {
+        List<User> allUsers = userRepository.findAll();
+        
+        long students = allUsers.stream().filter(u -> "STUDENT".equals(u.getRole())).count();
+        long evaluators = allUsers.stream().filter(u -> "EVALUATOR".equals(u.getRole())).count();
+        long revaluators = allUsers.stream().filter(u -> "REVALUATOR".equals(u.getRole())).count();
+        long admins = allUsers.stream().filter(u -> "ADMIN".equals(u.getRole())).count();
+        
+        Map<String, Long> stats = new HashMap<>();
+        stats.put("students", students);
+        stats.put("evaluators", evaluators);
+        stats.put("revaluators", revaluators);
+        stats.put("admins", admins);
+        
+        return ResponseEntity.ok(stats);
+    }
+    
+    /**
+     * Delete a user by ID
+     * DELETE /admin/users/{userId}
+     */
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        
+        userRepository.delete(user);
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "User deleted successfully");
+        response.put("userId", userId.toString());
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Get all revaluators (for assignment dropdown)
+     * GET /admin/users/revaluators
+     */
+    @GetMapping("/users/revaluators")
+    public ResponseEntity<List<Revaluator>> getRevaluators() {
+        List<User> allUsers = userRepository.findAll();
+        List<Revaluator> revaluators = allUsers.stream()
+                .filter(u -> "REVALUATOR".equals(u.getRole()))
+                .map(u -> (Revaluator) u)
+                .toList();
+        return ResponseEntity.ok(revaluators);
+    }
+    
+    /**
+     * Get all evaluators (for assignment dropdown)
+     * GET /admin/users/evaluators
+     */
+    @GetMapping("/users/evaluators")
+    public ResponseEntity<List<Evaluator>> getEvaluators() {
+        List<User> allUsers = userRepository.findAll();
+        List<Evaluator> evaluators = allUsers.stream()
+                .filter(u -> "EVALUATOR".equals(u.getRole()))
+                .map(u -> (Evaluator) u)
+                .toList();
+        return ResponseEntity.ok(evaluators);
     }
 }

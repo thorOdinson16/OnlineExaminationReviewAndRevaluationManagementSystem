@@ -6,46 +6,58 @@ import com.team.revaluation.model.AnswerScript;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * State Machine for AnswerScript following the official flowchart from the checklist.
+ * 
+ * Valid States:
+ * - SUBMITTED (initial)
+ * - UNDER_EVALUATION
+ * - EVALUATED
+ * - RESULTS_PUBLISHED
+ * - REVIEW_REQUESTED
+ * - REVIEW_IN_PROGRESS
+ * - REVIEW_COMPLETED
+ * - REVALUATION_REQUESTED
+ * - REVALUATION_IN_PROGRESS
+ * - REVALUATION_COMPLETED
+ * - FINALIZED (terminal)
+ * - AWAIT_STUDENT_DECISION
+ */
 public class AnswerScriptStateMachine {
 
     private static final Set<String> ALLOWED_TRANSITIONS = new HashSet<>();
 
     static {
-        // Define allowed transitions: "current->next"
+        // ==================== NORMAL EVALUATION FLOW ====================
+        addTransition("SUBMITTED", "UNDER_EVALUATION");      // Admin assigns evaluator
+        addTransition("UNDER_EVALUATION", "EVALUATED");       // Evaluator submits marks
+        addTransition("EVALUATED", "RESULTS_PUBLISHED");      // Evaluator/Admin publishes results
+
+        // ==================== REVIEW FLOW ====================
+        // Student requests review after results are published
+        addTransition("RESULTS_PUBLISHED", "REVIEW_REQUESTED");  // Student applies for review
+        addTransition("REVIEW_REQUESTED", "REVIEW_IN_PROGRESS"); // Admin assigns reviewer
+        addTransition("REVIEW_IN_PROGRESS", "REVIEW_COMPLETED"); // Reviewer completes
+        addTransition("REVIEW_COMPLETED", "AWAIT_STUDENT_DECISION"); // System waits for student
+        addTransition("AWAIT_STUDENT_DECISION", "FINALIZED");      // Student accepts marks
+        addTransition("AWAIT_STUDENT_DECISION", "REVALUATION_REQUESTED"); // Student requests revaluation
+        addTransition("REVIEW_COMPLETED", "RESULTS_PUBLISHED");    // Alternative: auto-publish after review
+
+        // ==================== REVALUATION FLOW ====================
+        // Student requests revaluation from published results or after review
+        addTransition("RESULTS_PUBLISHED", "REVALUATION_REQUESTED"); // Student applies for revaluation
+        addTransition("REVALUATION_REQUESTED", "REVALUATION_IN_PROGRESS"); // Admin assigns revaluator
+        addTransition("REVALUATION_IN_PROGRESS", "REVALUATION_COMPLETED"); // Revaluator submits marks
+        addTransition("REVALUATION_COMPLETED", "FINALIZED");            // Admin finalizes
+
+        // ==================== FINALIZATION ====================
+        addTransition("RESULTS_PUBLISHED", "FINALIZED");           // Admin finalizes without changes
+        addTransition("REVIEW_COMPLETED", "FINALIZED");            // Admin finalizes after review
+        addTransition("REVALUATION_COMPLETED", "FINALIZED");       // Admin finalizes after revaluation
         
-        // Normal evaluation flow
-        addTransition("SUBMITTED", "UNDER_EVALUATION");
-        addTransition("UNDER_EVALUATION", "EVALUATED");
-        addTransition("EVALUATED", "RESULTS_PUBLISHED");
-        
-        // ✅ Review flow: Payment first, then request (logical order)
-        addTransition("EVALUATED", "REVIEW_PAYMENT_PENDING");
-        addTransition("RESULTS_PUBLISHED", "REVIEW_PAYMENT_PENDING");
-        addTransition("REVIEW_PAYMENT_PENDING", "REVIEW_REQUESTED");  // After payment success
-        addTransition("REVIEW_PAYMENT_PENDING", "AWAIT_STUDENT_DECISION");
-        addTransition("REVIEW_REQUESTED", "REVIEW_IN_PROGRESS");
-        addTransition("REVIEW_IN_PROGRESS", "REVIEW_COMPLETED");
-        addTransition("REVIEW_COMPLETED", "RESULTS_PUBLISHED");
-        
-        // ✅ Revaluation flow: Payment first, then request
-        addTransition("EVALUATED", "REVALUATION_PAYMENT_PENDING");
-        addTransition("RESULTS_PUBLISHED", "REVALUATION_PAYMENT_PENDING");
-        addTransition("REVALUATION_PAYMENT_PENDING", "REVALUATION_REQUESTED");  // After payment success
-        addTransition("REVALUATION_PAYMENT_PENDING", "AWAIT_STUDENT_DECISION");
-        addTransition("REVALUATION_REQUESTED", "REVALUATION_IN_PROGRESS");
-        addTransition("REVALUATION_IN_PROGRESS", "REVALUATION_COMPLETED");
-        addTransition("REVALUATION_COMPLETED", "FINALIZED");
-        
-        // Finalization
-        addTransition("RESULTS_PUBLISHED", "FINALIZED");
-        addTransition("REVIEW_COMPLETED", "FINALIZED");
-        addTransition("REVALUATION_COMPLETED", "FINALIZED");
-        
-        // Rejection flow
-        addTransition("REVIEW_PAYMENT_PENDING", "REJECTED");
-        addTransition("REVALUATION_PAYMENT_PENDING", "REJECTED");
-        addTransition("REVIEW_REQUESTED", "REJECTED");
-        addTransition("REVALUATION_REQUESTED", "REJECTED");
+        // ==================== REJECTION FLOW ====================
+        addTransition("REVIEW_REQUESTED", "REJECTED");             // Admin rejects review
+        addTransition("REVALUATION_REQUESTED", "REJECTED");        // Admin rejects revaluation
     }
 
     private static void addTransition(String from, String to) {

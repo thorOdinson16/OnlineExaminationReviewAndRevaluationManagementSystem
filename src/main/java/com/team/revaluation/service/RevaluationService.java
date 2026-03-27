@@ -5,6 +5,8 @@ import com.team.revaluation.model.AnswerScript;
 import com.team.revaluation.model.RevaluationRequest;
 import com.team.revaluation.model.Student;
 import com.team.revaluation.model.Payment;
+import com.team.revaluation.model.Revaluator;
+import com.team.revaluation.model.User;
 import com.team.revaluation.repository.AnswerScriptRepository;
 import com.team.revaluation.repository.RevaluationRequestRepository;
 import com.team.revaluation.repository.UserRepository;
@@ -66,7 +68,6 @@ public class RevaluationService {
         request.setAnswerScript(script);
         request.setRevaluationFee(revaluationFeeStrategy.calculateFee());
         
-        // ✅ Use state machine
         RevaluationRequestStateMachine.transition(request, "PAYMENT_PENDING");
 
         RevaluationRequest savedRequest = revaluationRepo.save(request);
@@ -112,12 +113,12 @@ public class RevaluationService {
         Payment processedPayment = paymentService.processPayment(payment);
 
         if ("SUCCESS".equals(processedPayment.getPaymentStatus())) {
-            // ✅ Use state machine
             RevaluationRequestStateMachine.transition(request, "PAYMENT_SUCCESS");
 
             AnswerScript script = request.getAnswerScript();
             if (script != null) {
                 try {
+                    // ✅ Fixed: Use REVALUATION_REQUESTED which is in the state machine
                     AnswerScriptStateMachine.transition(script, "REVALUATION_REQUESTED");
                 } catch (InvalidStateTransitionException e) {
                     throw new RuntimeException("Invalid state transition: " + e.getMessage());
@@ -132,7 +133,6 @@ public class RevaluationService {
 
             return savedRequest;
         } else {
-            // ✅ Use state machine
             RevaluationRequestStateMachine.transition(request, "PAYMENT_FAILED");
             notificationService.notifyStudent(request.getStudent(),
                 "❌ Payment failed for revaluation request #" + revaluationId + ". Please try again.");
@@ -145,7 +145,6 @@ public class RevaluationService {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
 
-        // ✅ Use state machine instead of manual validation
         RevaluationRequestStateMachine.transition(request, newStatus);
         
         RevaluationRequest updatedRequest = revaluationRepo.save(request);
@@ -205,7 +204,6 @@ public class RevaluationService {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found with id: " + revaluationId));
 
-        // ✅ Validate status via state machine check
         if (!"REVALUATION_IN_PROGRESS".equals(request.getRevaluationStatus())) {
             throw new RuntimeException("Cannot submit marks. Request is in status: " + 
                 request.getRevaluationStatus() + ". Expected: REVALUATION_IN_PROGRESS");
@@ -231,7 +229,6 @@ public class RevaluationService {
 
         answerScriptRepository.save(script);
 
-        // ✅ Use state machine
         RevaluationRequestStateMachine.transition(request, "REVALUATION_COMPLETED");
         RevaluationRequest savedRequest = revaluationRepo.save(request);
 
@@ -254,7 +251,6 @@ public class RevaluationService {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
         
-        // ✅ Validate current status using state machine allowed transitions
         if (!RevaluationRequestStateMachine.isTransitionAllowed(request.getRevaluationStatus(), "REVALUATION_IN_PROGRESS")) {
             throw new RuntimeException(
                 "Cannot assign revaluator. Request is in status: " + request.getRevaluationStatus()
@@ -271,12 +267,12 @@ public class RevaluationService {
         Revaluator revaluator = (Revaluator) user;
         request.setRevaluator(revaluator);
         
-        // ✅ Use state machine
         RevaluationRequestStateMachine.transition(request, "REVALUATION_IN_PROGRESS");
         
         AnswerScript script = request.getAnswerScript();
         if (script != null) {
             try {
+                // ✅ Fixed: Check for REVALUATION_REQUESTED which is in the state machine
                 if ("REVALUATION_REQUESTED".equals(script.getStatus()) || 
                     "RESULTS_PUBLISHED".equals(script.getStatus())) {
                     AnswerScriptStateMachine.transition(script, "REVALUATION_IN_PROGRESS");
