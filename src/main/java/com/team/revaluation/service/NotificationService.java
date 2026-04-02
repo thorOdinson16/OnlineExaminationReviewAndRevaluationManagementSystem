@@ -13,46 +13,54 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Singleton pattern implemented for NotificationService.
- * Spring manages this as a singleton bean; getInstance() provides access
- * to the same instance for non-Spring callers.
+ * NotificationService — Singleton pattern.
+ *
+ * Spring manages this as an application-scoped singleton bean.
+ * The static instance reference lets non-Spring code (tests, utilities)
+ * call getInstance() and get the same Spring-managed object.
+ *
+ * Constructor is private so that 'new NotificationService()' is impossible
+ * outside this class — enforcing the singleton guarantee.
+ * Spring uses reflection to instantiate it once via the @Service annotation.
  */
 @Service
 public class NotificationService {
 
-    // 1. Private static instance - will be set after Spring initialization
+    // 1. Private static instance — set after Spring initialises the bean
     private static NotificationService instance;
 
     @Autowired
     private NotificationRepository notificationRepository;
 
-    // 2. Package-private constructor (not private) - Spring can call it
-    //    Outside code cannot use 'new' because it's in a different package
-    NotificationService() {
-        System.out.println("NotificationService (Singleton) initialized.");
+    // 2. Private constructor — no external code can call 'new NotificationService()'
+    //    Spring uses reflection to bypass this restriction for its own injection.
+    private NotificationService() {
+        System.out.println("NotificationService (Singleton) initialised.");
     }
 
-    // 3. Public static method to get the single instance
-    //    Returns the Spring-managed singleton instance
+    // 3. Public static accessor — always returns the Spring-managed singleton
     public static NotificationService getInstance() {
         if (instance == null) {
-            // Fallback - create instance if not yet set (should not happen in normal flow)
-            System.err.println("WARNING: NotificationService.getInstance() called before Spring initialization. Creating fallback instance.");
-            instance = new NotificationService();
+            throw new IllegalStateException(
+                "NotificationService.getInstance() called before Spring initialisation. " +
+                "Inject NotificationService via @Autowired instead."
+            );
         }
         return instance;
     }
 
-    // 4. Spring calls this after dependency injection to register the singleton
+    // 4. @PostConstruct registers the Spring-managed instance into the static field
     @jakarta.annotation.PostConstruct
     private void registerInstance() {
         instance = this;
-        System.out.println("✅ NotificationService singleton instance registered with Spring. Repository: " + 
-                          (notificationRepository != null ? "injected" : "NULL"));
+        System.out.println("NotificationService singleton registered. Repository injected: "
+            + (notificationRepository != null));
     }
 
-    // List of listeners (Observer pattern)
-    private List<NotificationListener> listeners = new ArrayList<>();
+    // ==================== OBSERVER SUPPORT ====================
+
+    // List of registered listeners (Observer pattern)
+    private final List<NotificationListener> listeners = new ArrayList<>();
 
     public interface NotificationListener {
         void onReviewStatusChanged(ReviewRequest request);
@@ -67,13 +75,11 @@ public class NotificationService {
         listeners.remove(listener);
     }
 
+    // ==================== NOTIFY METHODS ====================
+
     public void notifyStudent(Student student, String message) {
         if (student == null) {
-            System.out.println(String.format(
-                "[NOTIFICATION - %s] System notification: %s",
-                LocalDateTime.now(),
-                message
-            ));
+            System.out.printf("[NOTIFICATION - %s] System: %s%n", LocalDateTime.now(), message);
             return;
         }
 
@@ -81,30 +87,23 @@ public class NotificationService {
         notification.setStudent(student);
         notification.setMessage(message);
         notification.setIsRead(false);
+
         if (notificationRepository != null) {
             notificationRepository.save(notification);
         } else {
-            System.err.println("⚠️ NotificationRepository is null - notification not saved");
+            System.err.println("NotificationRepository is null — notification not persisted.");
         }
 
-        System.out.println(String.format(
-            "[NOTIFICATION - %s] To: %s (%s) - %s",
-            LocalDateTime.now(),
-            student.getName(),
-            student.getEmail(),
-            message
-        ));
+        System.out.printf("[NOTIFICATION - %s] To: %s (%s) — %s%n",
+            LocalDateTime.now(), student.getName(), student.getEmail(), message);
 
         sendEmailNotification(student, message);
         sendSmsNotification(student, message);
     }
 
     public void notifyReviewStatusChange(ReviewRequest request) {
-        String message = String.format(
-            "Review Request #%d status changed to: %s",
-            request.getReviewId(),
-            request.getReviewStatus()
-        );
+        String message = String.format("Review Request #%d status changed to: %s",
+            request.getReviewId(), request.getReviewStatus());
 
         notifyStudent(request.getStudent(), message);
 
@@ -114,11 +113,8 @@ public class NotificationService {
     }
 
     public void notifyRevaluationStatusChange(RevaluationRequest request) {
-        String message = String.format(
-            "Revaluation Request #%d status changed to: %s",
-            request.getRevaluationId(),
-            request.getRevaluationStatus()
-        );
+        String message = String.format("Revaluation Request #%d status changed to: %s",
+            request.getRevaluationId(), request.getRevaluationStatus());
 
         notifyStudent(request.getStudent(), message);
 
@@ -127,31 +123,25 @@ public class NotificationService {
         }
     }
 
-    private void sendEmailNotification(Student student, String message) {
-        if (student != null) {
-            System.out.println("📧 Email sent to " + student.getEmail() + ": " + message);
-        }
-    }
-
-    private void sendSmsNotification(Student student, String message) {
-        System.out.println("📱 SMS sent to student: " + message);
-    }
-
     public List<Notification> getUnreadNotifications(Student student) {
-        if (student == null || notificationRepository == null) {
-            return new ArrayList<>();
-        }
+        if (student == null || notificationRepository == null) return new ArrayList<>();
         return notificationRepository.findByStudentAndIsReadFalse(student);
     }
 
     public void markAsRead(Long notificationId) {
-        if (notificationRepository == null) {
-            System.err.println("⚠️ NotificationRepository is null - cannot mark as read");
-            return;
-        }
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
         notification.setIsRead(true);
         notificationRepository.save(notification);
+    }
+
+    // ==================== PRIVATE HELPERS ====================
+
+    private void sendEmailNotification(Student student, String message) {
+        System.out.printf("Email sent to %s: %s%n", student.getEmail(), message);
+    }
+
+    private void sendSmsNotification(Student student, String message) {
+        System.out.printf("SMS sent to student %s: %s%n", student.getName(), message);
     }
 }
