@@ -2,3 +2,7 @@ target/
 *.class
 *.jar
 logs/
+
+*.md
+*.log
+*.pdf

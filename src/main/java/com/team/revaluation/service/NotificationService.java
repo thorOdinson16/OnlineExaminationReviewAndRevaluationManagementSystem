@@ -13,53 +13,65 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * NotificationService — Singleton pattern.
+ * NotificationService — Creational (Singleton) Pattern.
  *
- * Spring manages this as an application-scoped singleton bean.
- * The static instance reference lets non-Spring code (tests, utilities)
- * call getInstance() and get the same Spring-managed object.
+ * Guarantees a single instance throughout the application:
+ *   - Private constructor prevents external instantiation via 'new'
+ *   - Static volatile reference ensures visibility across threads
+ *   - @PostConstruct registers the Spring-managed bean into the static field
+ *   - getInstance() is thread-safe via double-checked locking
  *
- * Constructor is private so that 'new NotificationService()' is impossible
- * outside this class — enforcing the singleton guarantee.
- * Spring uses reflection to instantiate it once via the @Service annotation.
+ * Spring uses reflection to call the private constructor once.
+ * All other code must obtain the instance via @Autowired or getInstance().
  */
 @Service
 public class NotificationService {
 
-    // 1. Private static instance — set after Spring initialises the bean
-    private static NotificationService instance;
+    // volatile guarantees that writes to 'instance' are visible across all threads immediately
+    private static volatile NotificationService instance;
 
     @Autowired
     private NotificationRepository notificationRepository;
 
-    // 2. Private constructor — no external code can call 'new NotificationService()'
-    //    Spring uses reflection to bypass this restriction for its own injection.
+    // Private constructor — prevents 'new NotificationService()' anywhere in the codebase.
+    // Spring bypasses this via reflection to create its managed bean.
     private NotificationService() {
         System.out.println("NotificationService (Singleton) initialised.");
     }
 
-    // 3. Public static accessor — always returns the Spring-managed singleton
+    /**
+     * Thread-safe accessor using double-checked locking.
+     * The first null check avoids synchronisation overhead on every call once initialised.
+     * The second null check inside the synchronized block prevents a race condition where
+     * two threads both pass the first check before either sets the instance.
+     */
     public static NotificationService getInstance() {
         if (instance == null) {
-            throw new IllegalStateException(
-                "NotificationService.getInstance() called before Spring initialisation. " +
-                "Inject NotificationService via @Autowired instead."
-            );
+            synchronized (NotificationService.class) {
+                if (instance == null) {
+                    throw new IllegalStateException(
+                        "NotificationService.getInstance() called before Spring initialisation. " +
+                        "Inject via @Autowired instead."
+                    );
+                }
+            }
         }
         return instance;
     }
 
-    // 4. @PostConstruct registers the Spring-managed instance into the static field
+    // @PostConstruct registers the Spring-managed bean into the static field
+    // so that getInstance() works for any non-Spring callers (tests, utilities)
     @jakarta.annotation.PostConstruct
     private void registerInstance() {
-        instance = this;
+        synchronized (NotificationService.class) {
+            instance = this;
+        }
         System.out.println("NotificationService singleton registered. Repository injected: "
             + (notificationRepository != null));
     }
 
     // ==================== OBSERVER SUPPORT ====================
 
-    // List of registered listeners (Observer pattern)
     private final List<NotificationListener> listeners = new ArrayList<>();
 
     public interface NotificationListener {
@@ -104,9 +116,7 @@ public class NotificationService {
     public void notifyReviewStatusChange(ReviewRequest request) {
         String message = String.format("Review Request #%d status changed to: %s",
             request.getReviewId(), request.getReviewStatus());
-
         notifyStudent(request.getStudent(), message);
-
         for (NotificationListener listener : listeners) {
             listener.onReviewStatusChanged(request);
         }
@@ -115,9 +125,7 @@ public class NotificationService {
     public void notifyRevaluationStatusChange(RevaluationRequest request) {
         String message = String.format("Revaluation Request #%d status changed to: %s",
             request.getRevaluationId(), request.getRevaluationStatus());
-
         notifyStudent(request.getStudent(), message);
-
         for (NotificationListener listener : listeners) {
             listener.onRevaluationStatusChanged(request);
         }

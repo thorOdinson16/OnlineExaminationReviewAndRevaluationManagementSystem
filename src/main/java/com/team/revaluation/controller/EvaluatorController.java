@@ -17,7 +17,13 @@ public class EvaluatorController {
     @Autowired
     private EvaluatorService evaluatorService;
 
-    // Pending scripts (UNDER_EVALUATION)
+    // Pending scripts (UNDER_EVALUATION) — matches checklist: GET /evaluator/scripts/pending
+    @GetMapping("/scripts/pending")
+    public ResponseEntity<List<AnswerScript>> getPendingScriptsByStatus() {
+        return ResponseEntity.ok(evaluatorService.getPendingScripts());
+    }
+
+    // Alias without /pending — keeps existing UI calls working
     @GetMapping("/scripts")
     public ResponseEntity<List<AnswerScript>> getPendingScripts() {
         return ResponseEntity.ok(evaluatorService.getPendingScripts());
@@ -29,7 +35,7 @@ public class EvaluatorController {
         return ResponseEntity.ok(evaluatorService.getEvaluatedScripts());
     }
 
-    // Submit marks for a script
+    // Submit marks for a script — goes through StateMachine via service
     @PutMapping("/scripts/{scriptId}/submit")
     public ResponseEntity<Map<String, Object>> submitMarks(
             @PathVariable Long scriptId,
@@ -43,7 +49,7 @@ public class EvaluatorController {
         return ResponseEntity.ok(response);
     }
 
-    // Verify (publish) an evaluated script
+    // Verify (publish) an evaluated script — transitions to RESULTS_PUBLISHED
     @PutMapping("/scripts/{scriptId}/verify")
     public ResponseEntity<Map<String, Object>> verifyScript(@PathVariable Long scriptId) {
         AnswerScript updated = evaluatorService.verifyScript(scriptId);

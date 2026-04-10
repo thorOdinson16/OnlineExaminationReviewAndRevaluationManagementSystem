@@ -21,15 +21,35 @@ public class PageController {
         return "register";
     }
 
-    // Student pages
+    // ==================== STUDENT PAGES ====================
+
     @GetMapping("/student/dashboard")
     public String studentDashboard() {
         return "student/dashboard";
     }
 
+    // Dedicated apply-for-review page (Abhijna checklist item)
+    @GetMapping("/student/apply-for-review")
+    public String applyForReview() {
+        return "student/apply-for-review";
+    }
+
+    // Payment confirm page (Abhijna checklist item)
     @GetMapping("/student/payment")
     public String payment() {
         return "student/payment";
+    }
+
+    // Payment confirm alias so it can also be reached as /student/payment-confirm
+    @GetMapping("/student/payment-confirm")
+    public String paymentConfirm() {
+        return "student/payment";
+    }
+
+    // Status tracker page (Abhijna checklist item)
+    @GetMapping("/student/status-tracker")
+    public String statusTracker() {
+        return "student/status-tracker";
     }
 
     @GetMapping("/student/revaluation-status")
@@ -37,13 +57,15 @@ public class PageController {
         return "student/revaluation-status";
     }
 
-    // Dashboard redirect page
+    // ==================== DASHBOARD REDIRECT ====================
+
     @GetMapping("/dashboard")
     public String dashboard() {
         return "dashboard";
     }
 
-    // Admin pages
+    // ==================== ADMIN PAGES ====================
+
     @GetMapping("/admin/dashboard")
     public String adminDashboard() {
         return "admin/dashboard";
@@ -54,13 +76,15 @@ public class PageController {
         return "admin/results";
     }
 
-    // Evaluator pages
+    // ==================== EVALUATOR PAGES ====================
+
     @GetMapping("/evaluator/dashboard")
     public String evaluatorDashboard() {
         return "evaluator/dashboard";
     }
 
-    // Revaluator pages - Single mapping (removed duplicate)
+    // ==================== REVALUATOR PAGES ====================
+
     @GetMapping("/revaluator/dashboard")
     public String revaluatorDashboard() {
         return "revaluator/dashboard";

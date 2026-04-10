@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Review Status Tracker - Exam Review System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+        .header {
+            background: white;
+            padding: 25px;
+            text-align: center;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        .header h1 { font-size: 26px; color: #2c3e50; }
+        .header p  { color: #64748b; margin-top: 6px; font-size: 14px; }
+        .nav {
+            background: white;
+            border-radius: 50px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 8px 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        .nav a {
+            color: #475569;
+            padding: 10px 22px;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 40px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .nav a:hover, .nav a.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        .card h2 { color: #2c3e50; font-size: 20px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            background: #f8fafc;
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e2e8f0;
+            font-size: 13px;
+        }
+        td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; color: #334155; }
+        tr:hover { background: #f8fafc; }
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .badge-pending    { background: #fef3c7; color: #d97706; }
+        .badge-success    { background: #d1fae5; color: #059669; }
+        .badge-progress   { background: #dbeafe; color: #2563eb; }
+        .badge-completed  { background: #ede9fe; color: #7c3aed; }
+        .badge-failed     { background: #fee2e2; color: #dc2626; }
+        .badge-cancelled  { background: #f1f5f9; color: #64748b; }
+        button {
+            padding: 8px 18px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s;
+        }
+        button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+        .empty-state { text-align: center; padding: 40px; color: #94a3b8; }
+        .empty-state i { font-size: 48px; margin-bottom: 12px; color: #cbd5e1; display: block; }
+        .refresh-btn {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 16px;
+        }
+        .refresh-btn button {
+            background: #f1f5f9;
+            color: #475569;
+            box-shadow: none;
+        }
+        .refresh-btn button:hover { background: #e2e8f0; transform: none; box-shadow: none; }
+
+        /* Timeline stepper */
+        .stepper {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            min-width: 90px;
+        }
+        .step-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+        }
+        .step-circle.done   { background: #667eea; color: white; }
+        .step-circle.active { background: #7c3aed; color: white; }
+        .step-label { font-size: 11px; color: #64748b; margin-top: 6px; text-align: center; font-weight: 500; }
+        .step-label.done   { color: #667eea; }
+        .step-label.active { color: #7c3aed; font-weight: 700; }
+        .step-line { flex: 1; height: 3px; background: #e2e8f0; margin-top: -18px; }
+        .step-line.done { background: #667eea; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-search" style="color:#667eea; margin-right:10px;"></i>Review Status Tracker</h1>
+        <p>Track the progress of your paper review requests</p>
+    </div>
+
+    <div class="nav">
+        <a href="/student/dashboard">My Results</a>
+        <a href="/student/apply-for-review">Apply for Review</a>
+        <a href="/student/status-tracker" class="active">Review Status</a>
+        <a href="/student/revaluation-status">Revaluation Status</a>
+        <a href="/login">Logout</a>
+    </div>
+
+    <div class="container">
+
+        <!-- Status flow stepper (legend) -->
+        <div class="card">
+            <h2><i class="fas fa-route" style="color:#667eea; margin-right:8px;"></i>Review Workflow</h2>
+            <div class="stepper" id="stepperLegend">
+                <div class="step">
+                    <div class="step-circle"><i class="fas fa-plus"></i></div>
+                    <div class="step-label">Applied</div>
+                </div>
+                <div class="step-line"></div>
+                <div class="step">
+                    <div class="step-circle"><i class="fas fa-credit-card"></i></div>
+                    <div class="step-label">Payment</div>
+                </div>
+                <div class="step-line"></div>
+                <div class="step">
+                    <div class="step-circle"><i class="fas fa-user-check"></i></div>
+                    <div class="step-label">Assigned</div>
+                </div>
+                <div class="step-line"></div>
+                <div class="step">
+                    <div class="step-circle"><i class="fas fa-tasks"></i></div>
+                    <div class="step-label">In Progress</div>
+                </div>
+                <div class="step-line"></div>
+                <div class="step">
+                    <div class="step-circle"><i class="fas fa-check-double"></i></div>
+                    <div class="step-label">Completed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Review Requests Table -->
+        <div class="card">
+            <h2><i class="fas fa-list-alt" style="color:#667eea; margin-right:8px;"></i>My Review Requests</h2>
+            <div class="refresh-btn">
+                <button onclick="loadReviews()">
+                    <i class="fas fa-sync-alt"></i>&nbsp; Refresh
+                </button>
+            </div>
+            <div id="reviewTable"></div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="card">
+            <h2><i class="fas fa-bell" style="color:#667eea; margin-right:8px;"></i>Notifications</h2>
+            <div id="notificationsList"></div>
+        </div>
+    </div>
+
+    <script>
+        const studentId = localStorage.getItem('userId');
+        if (!studentId) window.location.href = '/login';
+
+        function statusBadge(status) {
+            const map = {
+                'PAYMENT_PENDING': ['badge-pending',  'Payment Pending'],
+                'PAYMENT_SUCCESS': ['badge-success',  'Payment Success'],
+                'PAYMENT_FAILED':  ['badge-failed',   'Payment Failed'],
+                'IN_PROGRESS':     ['badge-progress', 'In Progress'],
+                'VERIFIED':        ['badge-progress', 'Verified'],
+                'COMPLETED':       ['badge-completed','Completed'],
+                'CANCELLED':       ['badge-cancelled','Cancelled'],
+                'REJECTED':        ['badge-failed',   'Rejected'],
+            };
+            const [cls, label] = map[status] || ['badge-pending', status];
+            return `<span class="badge ${cls}">${label}</span>`;
+        }
+
+        async function loadReviews() {
+            const container = document.getElementById('reviewTable');
+            container.innerHTML = '<p style="color:#94a3b8;font-size:14px;">Loading...</p>';
+            try {
+                const res  = await fetch(`/student/review/student/${studentId}`);
+                const data = await res.json();
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-list"></i>
+                            <p>No review requests found.<br>
+                               <a href="/student/apply-for-review" style="color:#667eea;font-weight:600;">Apply for a review</a>
+                            </p>
+                        </div>`;
+                    return;
+                }
+
+                let html = `<table>
+                    <thead><tr>
+                        <th>Request ID</th><th>Script</th><th>Subject</th>
+                        <th>Fee</th><th>Status</th><th>Action</th>
+                    </tr></thead><tbody>`;
+
+                data.forEach(r => {
+                    let action = '';
+                    if (r.reviewStatus === 'PAYMENT_PENDING') {
+                        action = `<button onclick="window.location.href='/student/payment?reviewId=${r.reviewId}'">
+                                    <i class="fas fa-credit-card"></i> Pay Now
+                                  </button>`;
+                    } else if (r.reviewStatus === 'COMPLETED' || r.reviewStatus === 'VERIFIED') {
+                        action = `<button onclick="window.location.href='/student/revaluation-status'">
+                                    <i class="fas fa-eye"></i> View / Escalate
+                                  </button>`;
+                    } else {
+                        action = '<span style="color:#94a3b8;font-size:13px;">—</span>';
+                    }
+
+                    html += `<tr>
+                        <td>#${r.reviewId}</td>
+                        <td>#${r.answerScript?.scriptId || 'N/A'}</td>
+                        <td>${r.answerScript?.exam?.subject || 'N/A'}</td>
+                        <td>₹${r.reviewFee ?? 'N/A'}</td>
+                        <td>${statusBadge(r.reviewStatus)}</td>
+                        <td>${action}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = `<div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error loading reviews. Please refresh.</p>
+                </div>`;
+            }
+        }
+
+        async function loadNotifications() {
+            const container = document.getElementById('notificationsList');
+            try {
+                const res  = await fetch(`/student/notifications/${studentId}`);
+                const data = await res.json();
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    container.innerHTML = '<p style="color:#94a3b8;font-size:14px;">No new notifications.</p>';
+                    return;
+                }
+
+                let html = '<ul style="list-style:none;padding:0;">';
+                data.forEach(n => {
+                    html += `<li style="padding:12px 0;border-bottom:1px solid #e2e8f0;font-size:14px;color:#334155;">
+                        <i class="fas fa-bell" style="color:#667eea;margin-right:8px;"></i>
+                        ${n.message}
+                        <span style="font-size:11px;color:#94a3b8;float:right;">${n.createdAt || ''}</span>
+                    </li>`;
+                });
+                html += '</ul>';
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<p style="color:#94a3b8;font-size:14px;">Could not load notifications.</p>';
+            }
+        }
+
+        loadReviews();
+        loadNotifications();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => { loadReviews(); loadNotifications(); }, 30000);
+    </script>
+</body>
+</html>

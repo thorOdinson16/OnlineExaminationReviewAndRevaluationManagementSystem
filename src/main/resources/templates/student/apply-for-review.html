@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Apply for Review - Exam Review System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+        .header {
+            background: white;
+            padding: 25px;
+            text-align: center;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        .header h1 { font-size: 26px; color: #2c3e50; }
+        .header p { color: #64748b; margin-top: 6px; font-size: 14px; }
+        .nav {
+            background: white;
+            border-radius: 50px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 8px 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        .nav a {
+            color: #475569;
+            padding: 10px 22px;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 40px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .nav a:hover, .nav a.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        .container { max-width: 700px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        .card h2 { color: #2c3e50; font-size: 20px; margin-bottom: 8px; }
+        .fee-badge {
+            display: inline-block;
+            background: #d1fae5;
+            color: #065f46;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 4px 14px;
+            border-radius: 20px;
+            margin-bottom: 24px;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        select:focus { outline: none; border-color: #667eea; }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102,126,234,0.3); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .message {
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        .message.success { background: #d1fae5; color: #065f46; border-left: 4px solid #059669; display: block; }
+        .message.error   { background: #fee2e2; color: #991b1b; border-left: 4px solid #dc2626; display: block; }
+        .info-box {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 14px 16px;
+            border-radius: 0 10px 10px 0;
+            margin-bottom: 24px;
+            font-size: 14px;
+            color: #1e40af;
+        }
+        .info-box i { margin-right: 8px; }
+        .empty-state { text-align: center; padding: 30px; color: #94a3b8; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-file-alt" style="color:#667eea; margin-right:10px;"></i>Apply for Paper Review</h1>
+        <p>Request a re-evaluation of your answer script</p>
+    </div>
+
+    <div class="nav">
+        <a href="/student/dashboard">My Results</a>
+        <a href="/student/apply-for-review" class="active">Apply for Review</a>
+        <a href="/student/status-tracker">Review Status</a>
+        <a href="/student/revaluation-status">Revaluation Status</a>
+        <a href="/login">Logout</a>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Select Answer Script</h2>
+            <span class="fee-badge"><i class="fas fa-tag"></i> Review Fee: ₹500 per paper</span>
+
+            <div class="info-box">
+                <i class="fas fa-info-circle"></i>
+                Only scripts with status <strong>Evaluated</strong> or <strong>Results Published</strong>
+                are eligible for review. Payment is processed immediately upon submission.
+            </div>
+
+            <div class="form-group">
+                <label for="scriptSelect">Choose Answer Script</label>
+                <select id="scriptSelect">
+                    <option value="">-- Loading scripts... --</option>
+                </select>
+            </div>
+
+            <button id="applyBtn" onclick="applyForReview()">
+                <i class="fas fa-paper-plane"></i>&nbsp; Submit Review Request &amp; Pay
+            </button>
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        const studentId = localStorage.getItem('userId');
+        if (!studentId) window.location.href = '/login';
+
+        async function loadScripts() {
+            try {
+                const res = await fetch(`/student/results/${studentId}`);
+                const scripts = await res.json();
+                const select = document.getElementById('scriptSelect');
+                const eligible = scripts.filter(s =>
+                    s.status === 'EVALUATED' || s.status === 'RESULTS_PUBLISHED'
+                );
+                if (eligible.length === 0) {
+                    select.innerHTML = '<option value="">No eligible scripts available</option>';
+                    return;
+                }
+                select.innerHTML = '<option value="">-- Select a script --</option>' +
+                    eligible.map(s =>
+                        `<option value="${s.scriptId}">
+                            Script #${s.scriptId} — ${s.exam?.subject || 'N/A'} — Marks: ${s.totalMarks ?? 'N/A'}
+                         </option>`
+                    ).join('');
+            } catch (e) {
+                document.getElementById('scriptSelect').innerHTML =
+                    '<option value="">Error loading scripts</option>';
+            }
+        }
+
+        async function applyForReview() {
+            const scriptId = document.getElementById('scriptSelect').value;
+            const msgDiv   = document.getElementById('message');
+            const btn      = document.getElementById('applyBtn');
+
+            if (!scriptId) {
+                msgDiv.className = 'message error';
+                msgDiv.textContent = 'Please select an answer script.';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; Processing...';
+
+            try {
+                const res = await fetch('/student/review/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        answerScript: { scriptId: parseInt(scriptId) },
+                        student:      { userId:   parseInt(studentId) }
+                    })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    msgDiv.className = 'message success';
+                    msgDiv.textContent =
+                        `✅ Review request #${data.reviewId} created! Fee: ₹${data.reviewFee}. ` +
+                        `Payment status: ${data.paymentStatus}. Redirecting to payment...`;
+                    setTimeout(() => {
+                        window.location.href = `/student/payment?reviewId=${data.reviewId}`;
+                    }, 2000);
+                } else {
+                    msgDiv.className = 'message error';
+                    msgDiv.textContent = '❌ ' + (data.message || data.error || 'Failed to apply for review.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i>&nbsp; Submit Review Request &amp; Pay';
+                }
+            } catch (e) {
+                msgDiv.className = 'message error';
+                msgDiv.textContent = '❌ Network error. Please try again.';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i>&nbsp; Submit Review Request &amp; Pay';
+            }
+        }
+
+        loadScripts();
+    </script>
+</body>
+</html>
