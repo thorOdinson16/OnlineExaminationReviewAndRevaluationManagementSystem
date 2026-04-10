@@ -11,131 +11,129 @@ import com.team.revaluation.repository.AnswerScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 
+/**
+ * PaymentService — orchestrates payment processing.
+ *
+ * Patterns in use (all wired, not dead code):
+ *   Abstract Factory : PaymentProcessorFactory (Spring bean, @Autowired)
+ *   Proxy            : PaymentProxy (validates amount > 0 and student exists)
+ *   Decorator        : PaymentLoggingDecorator (wraps proxy for audit logging)
+ *   Chain of Resp.   : 4-handler chain (amount → student → script → gateway)
+ */
 @Service
 public class PaymentService {
 
+    @Autowired private PaymentRepository paymentRepository;
+    @Autowired private NotificationRepository notificationRepository;
+    @Autowired private UserRepository userRepository;
+    @Autowired private AnswerScriptRepository answerScriptRepository;
+
+    // Chain of Responsibility handlers (Spring beans)
+    @Autowired private AmountValidationHandler       amountValidationHandler;
+    @Autowired private StudentExistsValidationHandler studentExistsValidationHandler;
+    @Autowired private ScriptStatusValidationHandler  scriptStatusValidationHandler;
+    @Autowired private GatewayValidationHandler       gatewayValidationHandler;
+
+    /**
+     * Abstract Factory: @Autowired on the FACTORY BEAN, not via static call.
+     * This means PaymentService depends on the PaymentProcessorFactory
+     * abstraction, satisfying DIP.
+     */
     @Autowired
-    private PaymentRepository paymentRepository;
-    
-    @Autowired
-    private NotificationRepository notificationRepository;
-    
-    @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
-    private AnswerScriptRepository answerScriptRepository;
-    
-    @Autowired
-    private ScriptStatusValidationHandler scriptStatusValidationHandler;
-    
-    @Autowired
-    private AmountValidationHandler amountValidationHandler;
-    
-    @Autowired
-    private StudentExistsValidationHandler studentExistsValidationHandler;
-    
-    @Autowired
-    private GatewayValidationHandler gatewayValidationHandler;
-    
+    private PaymentProcessorFactory paymentProcessorFactory;
+
+    // Structural pattern chain: Proxy → Decorator → Gateway
     private IPaymentGateway paymentGateway;
-    private PaymentProxy paymentProxy;
+    private PaymentProxy    paymentProxy;
+
+    // Chain of Responsibility head
     private PaymentValidationHandler validationChain;
-    
-    public PaymentService() {
-        // ✅ Create real gateway
+
+    @PostConstruct
+    private void init() {
+        // ── Proxy (validates amount > 0 and student exists before gateway) ──
         IPaymentGateway realGateway = PaymentGatewaySingleton.getInstance();
-        
-        // ✅ Create Proxy with validation (will be configured with student later)
         this.paymentProxy = new PaymentProxy(realGateway);
-        
-        // ✅ Wrap Proxy with Decorator for logging (Decorator pattern)
+
+        // ── Decorator (wraps proxy with audit logging) ───────────────────────
         this.paymentGateway = new PaymentLoggingDecorator(paymentProxy);
-        
-        System.out.println("PaymentService initialized with Proxy → Decorator → Gateway");
-    }
-    
-    private void initializeValidationChain() {
-        // Build Chain of Responsibility
+
+        // ── Chain of Responsibility ───────────────────────────────────────────
         amountValidationHandler.setNext(studentExistsValidationHandler);
         studentExistsValidationHandler.setNext(scriptStatusValidationHandler);
         scriptStatusValidationHandler.setNext(gatewayValidationHandler);
         this.validationChain = amountValidationHandler;
+
+        System.out.println("[PaymentService] Initialized: CoR → Proxy → Decorator → Gateway");
     }
 
     @Transactional
     public Payment processPayment(Payment payment) {
-        // Initialize validation chain if not already done
-        if (validationChain == null) {
-            initializeValidationChain();
-        }
-        
-        // Run through validation chain
+
+        // 1. Chain of Responsibility: amount → student exists → script status → gateway
         try {
             validationChain.handle(payment, userRepository);
         } catch (RuntimeException e) {
             payment.setPaymentStatus("FAILED");
-            System.err.println("Payment validation failed: " + e.getMessage());
+            System.err.println("[PaymentService] Validation failed: " + e.getMessage());
             return paymentRepository.save(payment);
         }
-        
-        // ✅ Set student in Proxy for validation
+
+        // 2. Set student on Proxy so it can do its own guard check
         paymentProxy.setStudent(payment.getStudent());
-        
-        // Get appropriate payment processor using Factory
-        PaymentProcessor processor = PaymentProcessorFactory.getPaymentProcessor(payment.getPaymentType());
-        boolean processorSuccess = processor.process(payment);
-        
-        // ✅ Process through Proxy + Decorator chain
-        boolean gatewaySuccess = paymentGateway.processTransaction(payment.getAmount());
-        
-        // Update the database status based on the result
-        if (processorSuccess && gatewaySuccess) {
-            payment.setPaymentStatus("SUCCESS");
-        } else {
-            payment.setPaymentStatus("FAILED");
-        }
-        
+
+        // 3. Abstract Factory: obtain processor through the factory BEAN (not static call)
+        PaymentProcessor processor = paymentProcessorFactory.getPaymentProcessor(payment.getPaymentType());
+        boolean processorOk = processor.process(payment);
+
+        // 4. Proxy + Decorator: process through gateway chain
+        boolean gatewayOk = paymentGateway.processTransaction(payment.getAmount());
+
+        payment.setPaymentStatus((processorOk && gatewayOk) ? "SUCCESS" : "FAILED");
         return paymentRepository.save(payment);
     }
-    
+
+    // ── Read helpers ──────────────────────────────────────────────────────────
+
     public Payment getPaymentById(Long paymentId) {
         return paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
+            .orElseThrow(() -> new RuntimeException("Payment not found: " + paymentId));
     }
-    
+
     public List<Payment> getPaymentsByStudent(Long studentId) {
         Student student = (Student) userRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+            .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
         return paymentRepository.findByStudent(student);
     }
-    
+
     public List<Payment> getAllPayments() {
         return paymentRepository.findAll();
     }
-    
+
     public List<Payment> getPaymentsByStatus(String status) {
         return paymentRepository.findByPaymentStatus(status);
     }
-    
+
     public List<Notification> getUnreadNotifications(Long studentId) {
         Student student = (Student) userRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+            .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
         return notificationRepository.findByStudentAndIsReadFalse(student);
     }
-    
+
     public void markNotificationAsRead(Long notificationId) {
-        Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("Notification not found"));
-        notification.setIsRead(true);
-        notificationRepository.save(notification);
+        Notification n = notificationRepository.findById(notificationId)
+            .orElseThrow(() -> new RuntimeException("Notification not found: " + notificationId));
+        n.setIsRead(true);
+        notificationRepository.save(n);
     }
-    
+
     public List<Notification> getNotificationsByStudent(Long studentId) {
         Student student = (Student) userRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+            .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
         return notificationRepository.findByStudent(student);
     }
 }

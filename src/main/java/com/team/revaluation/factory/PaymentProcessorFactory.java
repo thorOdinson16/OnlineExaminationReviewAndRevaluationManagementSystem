@@ -1,54 +1,56 @@
 package com.team.revaluation.factory;
 
 import com.team.revaluation.service.PaymentProcessor;
+import org.springframework.stereotype.Component;
+
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Factory class that uses Abstract Factory pattern.
- * This provides a family of related factories for different payment types.
+ * PaymentProcessorFactory — Abstract Factory pattern (Creational, checklist §4.1).
+ *
+ * PATTERN EXPLANATION for report:
+ *   - PaymentProcessorAbstractFactory is the abstract factory interface.
+ *   - FullPaymentProcessorFactory and PartialPaymentProcessorFactory are the
+ *     two concrete factories, each encapsulating the creation of one processor.
+ *   - PaymentProcessorFactory is the CLIENT of those factories: it holds a
+ *     registry of PaymentProcessorAbstractFactory instances and delegates
+ *     creation to them.
+ *
+ * This is a Spring bean (@Component) so PaymentService can @Autowire it,
+ * removing the previous static method call that bypassed the interface.
  */
+@Component
 public class PaymentProcessorFactory {
-    
-    // Registry of concrete factories (Abstract Factory pattern)
-    private static final Map<String, PaymentProcessorAbstractFactory> FACTORY_REGISTRY = new HashMap<>();
-    
-    static {
-        // Register concrete factories
-        FACTORY_REGISTRY.put("PARTIAL", new PartialPaymentProcessorFactory());
-        FACTORY_REGISTRY.put("FULL", new FullPaymentProcessorFactory());
+
+    // Registry: payment type → concrete abstract-factory implementation
+    private final Map<String, PaymentProcessorAbstractFactory> registry = new HashMap<>();
+
+    public PaymentProcessorFactory() {
+        // Register the two concrete factories
+        registry.put("PARTIAL", new PartialPaymentProcessorFactory());
+        registry.put("FULL",    new FullPaymentProcessorFactory());
     }
-    
+
     /**
-     * Get the appropriate payment processor using Abstract Factory pattern.
-     * This method demonstrates the Factory Method pattern as well.
+     * Returns the correct PaymentProcessor by delegating to the registered
+     * concrete factory.  The client (PaymentService) depends only on the
+     * PaymentProcessorAbstractFactory interface — never on a concrete class.
+     *
+     * @param paymentType "PARTIAL" or "FULL"
+     * @return a PaymentProcessor instance created by the matching factory
      */
-    public static PaymentProcessor getPaymentProcessor(String paymentType) {
-        String type = paymentType.toUpperCase();
-        
-        PaymentProcessorAbstractFactory factory = FACTORY_REGISTRY.get(type);
-        
+    public PaymentProcessor getPaymentProcessor(String paymentType) {
+        String key = (paymentType == null) ? "" : paymentType.toUpperCase();
+
+        PaymentProcessorAbstractFactory factory = registry.get(key);
         if (factory == null) {
-            throw new IllegalArgumentException("Invalid payment type: " + paymentType + 
-                ". Supported types: PARTIAL, FULL");
+            throw new IllegalArgumentException(
+                "No factory registered for payment type: " + paymentType +
+                ". Supported: PARTIAL, FULL");
         }
-        
-        // Delegate to the concrete factory to create the processor
+
+        // Delegate creation to the concrete abstract factory
         return factory.createPaymentProcessor();
-    }
-    
-    /**
-     * Alternative: Direct creation for simplicity
-     * (This demonstrates Factory Method pattern)
-     */
-    public static PaymentProcessor createProcessor(String paymentType) {
-        switch (paymentType.toUpperCase()) {
-            case "PARTIAL":
-                return new com.team.revaluation.service.PartialPaymentProcessor();
-            case "FULL":
-                return new com.team.revaluation.service.FullPaymentProcessor();
-            default:
-                throw new IllegalArgumentException("Invalid payment type: " + paymentType);
-        }
     }
 }

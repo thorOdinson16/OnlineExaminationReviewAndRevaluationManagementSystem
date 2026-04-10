@@ -11,71 +11,66 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * RevaluatorController — thin controller, no business logic.
+ * RevaluatorController — thin REST controller (no business logic).
  *
- * DIP (checklist §5): @Autowired on IRevaluationService, not on RevaluationService directly.
+ * DIP: @Autowired on IRevaluationService interface (not the concrete class).
  *
- * Checklist §3.4 endpoint mapping:
- *   GET /revaluator/requests              → filters to REVALUATION_IN_PROGRESS only
- *   PUT /revaluator/requests/{id}/submit  → REVALUATION_COMPLETED + notifies student
+ * Checklist §3.4 endpoints:
+ *   GET  /revaluator/requests              → filters to REVALUATION_IN_PROGRESS only
+ *   PUT  /revaluator/requests/{id}/submit  → REVALUATION_COMPLETED + notifies student
  */
 @RestController
 @RequestMapping("/revaluator")
 public class RevaluatorController {
 
-    // DIP: depend on the abstraction
     @Autowired
     private IRevaluationService revaluationService;
 
     /**
      * Satisfies: "GET /revaluator/requests filters to REVALUATION_IN_PROGRESS only"
+     * Returns only requests that are currently in progress, ready for the revaluator
+     * to submit marks on.
      */
     @GetMapping("/requests")
-    public ResponseEntity<List<RevaluationRequest>> getAllRequests() {
-        return ResponseEntity.ok(revaluationService.getPendingForRevaluator());
-    }
-
-    @GetMapping("/requests/pending")
     public ResponseEntity<List<RevaluationRequest>> getPendingRequests() {
+        // getPendingForRevaluator() queries for REVALUATION_IN_PROGRESS only
         return ResponseEntity.ok(revaluationService.getPendingForRevaluator());
-    }
-
-    @GetMapping("/requests/{id}")
-    public ResponseEntity<RevaluationRequest> getRequestById(@PathVariable Long id) {
-        return ResponseEntity.ok(revaluationService.getRevaluationById(id));
     }
 
     /**
      * Satisfies: "PUT /revaluator/requests/{id}/submit → REVALUATION_COMPLETED + notifies student"
+     *
+     * @param id      revaluationId
+     * @param marks   new marks awarded by the revaluator
+     * @param comments optional comments
      */
     @PutMapping("/requests/{id}/submit")
-    public ResponseEntity<Map<String, Object>> submitRevaluationMarks(
+    public ResponseEntity<Map<String, Object>> submitMarks(
             @PathVariable Long id,
             @RequestParam Float marks,
             @RequestParam(required = false) String comments) {
 
-        RevaluationRequest savedRequest = revaluationService.submitRevaluationMarks(id, marks, comments);
+        RevaluationRequest updated = revaluationService.submitRevaluationMarks(id, marks, comments);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("message",   "Revaluation marks submitted successfully");
-        response.put("requestId", id);
-        response.put("scriptId",  savedRequest.getAnswerScript().getScriptId());
-        response.put("newMarks",  marks);
-        response.put("status",    savedRequest.getRevaluationStatus());
-
+        response.put("message",            "Revaluation marks submitted successfully");
+        response.put("revaluationId",      id);
+        response.put("newMarks",           marks);
+        response.put("revaluationStatus",  updated.getRevaluationStatus());
+        response.put("scriptStatus",       updated.getAnswerScript() != null
+                                               ? updated.getAnswerScript().getStatus() : "N/A");
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/dashboard/stats")
-    public ResponseEntity<Map<String, Object>> getDashboardStats() {
-        long pending   = revaluationService.countByStatus("REVALUATION_IN_PROGRESS");
-        long completed = revaluationService.countByStatus("REVALUATION_COMPLETED");
+    /** List all requests assigned to a specific revaluator (used by dashboard). */
+    @GetMapping("/requests/all")
+    public ResponseEntity<List<RevaluationRequest>> getAllRequests() {
+        return ResponseEntity.ok(revaluationService.getAllRevaluations());
+    }
 
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("pendingCount",   pending);
-        stats.put("completedCount", completed);
-        stats.put("totalCount",     pending + completed);
-
-        return ResponseEntity.ok(stats);
+    /** Get a single revaluation request by id. */
+    @GetMapping("/requests/{id}")
+    public ResponseEntity<RevaluationRequest> getRequest(@PathVariable Long id) {
+        return ResponseEntity.ok(revaluationService.getRevaluationById(id));
     }
 }

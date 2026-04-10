@@ -16,21 +16,20 @@ import java.util.Map;
 
 /**
  * EvaluatorService — owns all evaluator business logic.
- * Implements IEvaluatorService for DIP (checklist §5).
+ *
+ * All AnswerScript status changes go through AnswerScriptStateMachine (State pattern).
+ * No raw script.setStatus() calls exist here.
+ *
+ * Implements IEvaluatorService for DIP compliance.
  */
 @Service
 public class EvaluatorService implements IEvaluatorService {
 
-    @Autowired
-    private AnswerScriptRepository answerScriptRepository;
+    @Autowired private AnswerScriptRepository answerScriptRepository;
+    @Autowired private UserRepository userRepository;
+    @Autowired private NotificationService notificationService;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    /**
-     * Returns all scripts pending evaluation (UNDER_EVALUATION).
-     * Satisfies: "GET /evaluator/scripts/pending filters by UNDER_EVALUATION status"
-     */
+    // ── Checklist §3.2: GET /evaluator/scripts/pending ───────────────────────
     @Override
     public List<AnswerScript> getPendingScripts() {
         return answerScriptRepository.findByStatus("UNDER_EVALUATION");
@@ -41,63 +40,75 @@ public class EvaluatorService implements IEvaluatorService {
         return answerScriptRepository.findByStatus("EVALUATED");
     }
 
-    /**
-     * Submits marks; transitions UNDER_EVALUATION → EVALUATED via StateMachine.
-     * Satisfies: "PUT /evaluator/scripts/{scriptId}/submit goes through StateMachine → EVALUATED"
-     */
-    @Override
+    // ── Checklist §3.2: PUT /evaluator/scripts/{scriptId}/submit ─────────────
+    // Goes through StateMachine → EVALUATED
     @Transactional
+    @Override
     public AnswerScript submitMarks(Long scriptId, Float marks) {
         AnswerScript script = answerScriptRepository.findById(scriptId)
-                .orElseThrow(() -> new RuntimeException("Script not found with id: " + scriptId));
+            .orElseThrow(() -> new RuntimeException("Script not found: " + scriptId));
 
-        if (!"UNDER_EVALUATION".equals(script.getStatus())) {
-            throw new InvalidStateTransitionException(
-                "Script must be UNDER_EVALUATION to submit marks. Current: " + script.getStatus());
+        if (marks == null || marks < 0) {
+            throw new RuntimeException("Invalid marks: " + marks);
         }
 
         script.setTotalMarks(marks);
-        AnswerScriptStateMachine.transition(script, "EVALUATED");   // State Machine enforces transition
-        return answerScriptRepository.save(script);
-    }
 
-    /**
-     * Publishes results; transitions EVALUATED → RESULTS_PUBLISHED via StateMachine.
-     * Satisfies: "PUT /evaluator/scripts/{scriptId}/verify transitions → RESULTS_PUBLISHED"
-     */
-    @Override
-    @Transactional
-    public AnswerScript verifyScript(Long scriptId) {
-        AnswerScript script = answerScriptRepository.findById(scriptId)
-                .orElseThrow(() -> new RuntimeException("Script not found with id: " + scriptId));
-
-        if (!"EVALUATED".equals(script.getStatus())) {
-            throw new InvalidStateTransitionException(
-                "Script must be EVALUATED to publish. Current: " + script.getStatus());
+        try {
+            AnswerScriptStateMachine.transition(script, "EVALUATED");
+        } catch (InvalidStateTransitionException e) {
+            throw new RuntimeException("State transition failed: " + e.getMessage());
         }
 
-        AnswerScriptStateMachine.transition(script, "RESULTS_PUBLISHED");
-        return answerScriptRepository.save(script);
+        AnswerScript saved = answerScriptRepository.save(script);
+
+        if (saved.getStudent() != null) {
+            notificationService.notifyStudent(saved.getStudent(),
+                "Marks submitted for Script #" + scriptId + ". Marks: " + marks);
+        }
+        return saved;
     }
 
-    /**
-     * Assigns an evaluator to a script; transitions SUBMITTED → UNDER_EVALUATION via StateMachine.
-     * Satisfies: "POST /admin/evaluator/assign assigns evaluator + transitions → UNDER_EVALUATION"
-     */
-    @Override
+    // ── Checklist §3.2: PUT /evaluator/scripts/{scriptId}/verify ─────────────
+    // Transitions EVALUATED → RESULTS_PUBLISHED
     @Transactional
+    @Override
+    public AnswerScript verifyScript(Long scriptId) {
+        AnswerScript script = answerScriptRepository.findById(scriptId)
+            .orElseThrow(() -> new RuntimeException("Script not found: " + scriptId));
+
+        try {
+            AnswerScriptStateMachine.transition(script, "RESULTS_PUBLISHED");
+        } catch (InvalidStateTransitionException e) {
+            throw new RuntimeException("State transition failed: " + e.getMessage());
+        }
+
+        AnswerScript saved = answerScriptRepository.save(script);
+
+        if (saved.getStudent() != null) {
+            notificationService.notifyStudent(saved.getStudent(),
+                "Results published for Script #" + scriptId + ". Please check your results.");
+        }
+        return saved;
+    }
+
+    // ── Checklist §3.2: POST /admin/evaluator/assign ─────────────────────────
+    // Assigns evaluator + transitions SUBMITTED → UNDER_EVALUATION
+    @Transactional
+    @Override
     public Map<String, Object> assignEvaluatorToScript(Long scriptId, Long evaluatorId) {
         AnswerScript script = answerScriptRepository.findById(scriptId)
-                .orElseThrow(() -> new RuntimeException("Script not found with id: " + scriptId));
+            .orElseThrow(() -> new RuntimeException("Script not found: " + scriptId));
 
         User user = userRepository.findById(evaluatorId)
-                .orElseThrow(() -> new RuntimeException("Evaluator not found with id: " + evaluatorId));
+            .orElseThrow(() -> new RuntimeException("User not found: " + evaluatorId));
 
         if (!"EVALUATOR".equals(user.getRole())) {
             throw new RuntimeException("User is not an evaluator");
         }
 
         Evaluator evaluator = (Evaluator) user;
+        script.setEvaluator(evaluator);
 
         try {
             AnswerScriptStateMachine.transition(script, "UNDER_EVALUATION");
@@ -105,15 +116,19 @@ public class EvaluatorService implements IEvaluatorService {
             throw new RuntimeException("Cannot assign evaluator: " + e.getMessage());
         }
 
-        script.setEvaluator(evaluator);
-        answerScriptRepository.save(script);
+        AnswerScript saved = answerScriptRepository.save(script);
+
+        if (saved.getStudent() != null) {
+            notificationService.notifyStudent(saved.getStudent(),
+                "Your answer script #" + scriptId + " has been assigned to an evaluator.");
+        }
 
         Map<String, Object> response = new HashMap<>();
         response.put("message",       "Evaluator assigned successfully");
         response.put("scriptId",      scriptId);
         response.put("evaluatorId",   evaluatorId);
         response.put("evaluatorName", evaluator.getName());
-        response.put("status",        "UNDER_EVALUATION");
+        response.put("status",        saved.getStatus());
         return response;
     }
 }
