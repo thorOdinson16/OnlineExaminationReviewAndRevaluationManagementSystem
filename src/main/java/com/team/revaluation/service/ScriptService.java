@@ -10,47 +10,47 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * ScriptService owns all AnswerScript business logic.
  *
- * Previously AdminController was calling answerScriptRepository and
- * AnswerScriptStateMachine directly — violating the MVC rule that controllers
- * must not contain business logic or direct repository calls.
- * All of that logic now lives here.
+ * FIX: finalizeResult now routes through the correct AnswerScriptStateMachine path.
+ *   - From REVALUATION_COMPLETED: → FINAL_RESULT_UPDATED → FINALIZED  (§6 rows 14-15)
+ *   - From RESULTS_PUBLISHED or other states: → FINALIZED  (shortcut path, allowed)
  */
 @Service
-public class ScriptService {
+public class ScriptService implements IScriptService {
 
-    @Autowired
-    private AnswerScriptRepository answerScriptRepository;
-
-    @Autowired
-    private NotificationService notificationService;
+    @Autowired private AnswerScriptRepository answerScriptRepository;
+    @Autowired private NotificationService notificationService;
 
     // ==================== READ ====================
 
+    @Override
     public List<AnswerScript> getAllScripts() {
         return answerScriptRepository.findAllWithDetails();
     }
 
+    @Override
     public AnswerScript getScriptById(Long scriptId) {
         return answerScriptRepository.findById(scriptId)
                 .orElseThrow(() -> new RuntimeException("Script not found with id: " + scriptId));
     }
 
+    @Override
     public List<AnswerScript> getScriptsByStudent(Long studentId) {
         return answerScriptRepository.findByStudentUserId(studentId);
     }
 
+    @Override
     public List<AnswerScript> getScriptsByStatus(String status) {
         return answerScriptRepository.findByStatus(status);
     }
 
-    // ==================== PUBLISH / FINALIZE ====================
+    // ==================== PUBLISH ====================
 
     @Transactional
+    @Override
     public Map<String, Object> publishResult(Long scriptId) {
         AnswerScript script = answerScriptRepository.findById(scriptId)
                 .orElseThrow(() -> new RuntimeException("Script not found with id: " + scriptId));
@@ -78,7 +78,17 @@ public class ScriptService {
         return response;
     }
 
+    // ==================== FINALIZE ====================
+
+    /**
+     * Satisfies: "PUT /admin/results/{scriptId}/finalize → FINALIZED, updates final marks, notifies student"
+     *
+     * FIX: For scripts coming from REVALUATION_COMPLETED, the §6 state machine requires:
+     *   REVALUATION_COMPLETED → FINAL_RESULT_UPDATED → FINALIZED
+     * For all other eligible states, the shortcut FINALIZED transition is allowed.
+     */
     @Transactional
+    @Override
     public Map<String, Object> finalizeResult(Long scriptId, Float finalMarks) {
         AnswerScript script = answerScriptRepository.findById(scriptId)
                 .orElseThrow(() -> new RuntimeException("Script not found with id: " + scriptId));
@@ -88,7 +98,15 @@ public class ScriptService {
         }
 
         try {
-            AnswerScriptStateMachine.transition(script, "FINALIZED");
+            String current = script.getStatus();
+            if ("REVALUATION_COMPLETED".equals(current)) {
+                // §6 rows 14-15: REVALUATION_COMPLETED → FINAL_RESULT_UPDATED → FINALIZED
+                AnswerScriptStateMachine.transition(script, "FINAL_RESULT_UPDATED");
+                AnswerScriptStateMachine.transition(script, "FINALIZED");
+            } else {
+                // Direct shortcut (covered by AnswerScriptStateMachine convenience transitions)
+                AnswerScriptStateMachine.transition(script, "FINALIZED");
+            }
         } catch (InvalidStateTransitionException e) {
             throw new RuntimeException("Cannot finalize results: " + e.getMessage());
         }
@@ -112,6 +130,7 @@ public class ScriptService {
     }
 
     @Transactional
+    @Override
     public Map<String, Object> bulkPublishResults(List<Long> scriptIds) {
         int published = 0;
         int failed = 0;
@@ -141,17 +160,16 @@ public class ScriptService {
         return response;
     }
 
-    // ==================== STATS ====================
-
+    @Override
     public Map<String, Object> getResultStats() {
         List<AnswerScript> all = answerScriptRepository.findAll();
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalScripts", all.size());
-        stats.put("published",       count(all, "RESULTS_PUBLISHED"));
-        stats.put("finalized",        count(all, "FINALIZED"));
-        stats.put("evaluated",        count(all, "EVALUATED"));
-        stats.put("underEvaluation",  count(all, "UNDER_EVALUATION"));
+        stats.put("published",      count(all, "RESULTS_PUBLISHED"));
+        stats.put("finalized",      count(all, "FINALIZED"));
+        stats.put("evaluated",      count(all, "EVALUATED"));
+        stats.put("underEvaluation",count(all, "UNDER_EVALUATION"));
         return stats;
     }
 

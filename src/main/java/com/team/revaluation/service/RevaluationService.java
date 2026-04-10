@@ -20,34 +20,22 @@ import java.util.Map;
 import java.util.HashMap;
 
 @Service
-public class RevaluationService {
+public class RevaluationService implements IRevaluationService {
 
-    @Autowired
-    private RevaluationRequestRepository revaluationRepo;
-
-    @Autowired
-    private AnswerScriptRepository answerScriptRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private NotificationService notificationService;
-
-    @Autowired
-    private PaymentService paymentService;
+    @Autowired private RevaluationRequestRepository revaluationRepo;
+    @Autowired private AnswerScriptRepository answerScriptRepository;
+    @Autowired private UserRepository userRepository;
+    @Autowired private NotificationService notificationService;
+    @Autowired private PaymentService paymentService;
 
     @Autowired
     @Qualifier("fullRevaluationFeeStrategy")
-    private FeeCalculationStrategy revaluationFeeStrategy;   // FullRevaluationFeeStrategy — not hardcoded
+    private FeeCalculationStrategy revaluationFeeStrategy;
 
-    // ==================== APPLY (Step 1 — checklist §3.3) ====================
+    // ==================== APPLY ====================
 
-    /**
-     * Creates a RevaluationRequest with status PAYMENT_PENDING.
-     * Satisfies: "POST /student/revaluation/apply — RevaluationRequest with PAYMENT_PENDING"
-     */
     @Transactional
+    @Override
     public RevaluationRequest applyForRevaluation(Long scriptId, Long studentId) {
         AnswerScript script = answerScriptRepository.findById(scriptId)
                 .orElseThrow(() -> new RuntimeException("Script not found with id: " + scriptId));
@@ -55,8 +43,14 @@ public class RevaluationService {
         Student student = (Student) userRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found with id: " + studentId));
 
-        if (!script.getStatus().equals("EVALUATED") && !script.getStatus().equals("RESULTS_PUBLISHED")) {
-            throw new RuntimeException("Script is not eligible for revaluation. Current status: " + script.getStatus());
+        // Script must be in AWAIT_STUDENT_DECISION or RESULTS_PUBLISHED/EVALUATED for revaluation
+        String scriptStatus = script.getStatus();
+        boolean eligible = "AWAIT_STUDENT_DECISION".equals(scriptStatus)
+                        || "RESULTS_PUBLISHED".equals(scriptStatus)
+                        || "EVALUATED".equals(scriptStatus);
+        if (!eligible) {
+            throw new RuntimeException(
+                "Script is not eligible for revaluation. Current status: " + scriptStatus);
         }
 
         // Guard against duplicate active requests
@@ -76,27 +70,40 @@ public class RevaluationService {
         request.setAnswerScript(script);
         request.setRevaluationFee(revaluationFeeStrategy.calculateFee());
 
-        // Start at PAYMENT_PENDING
+        // RevaluationRequest starts at PAYMENT_PENDING
         RevaluationRequestStateMachine.transition(request, "PAYMENT_PENDING");
+
+        // FIX: AnswerScript must also mirror: AWAIT_STUDENT_DECISION → REVALUATION_REQUESTED (§6 row 10)
+        // Then: REVALUATION_REQUESTED → REVALUATION_PAYMENT_PENDING (§6 row 11)
+        try {
+            if ("AWAIT_STUDENT_DECISION".equals(scriptStatus)) {
+                AnswerScriptStateMachine.transition(script, "REVALUATION_REQUESTED");
+                AnswerScriptStateMachine.transition(script, "REVALUATION_PAYMENT_PENDING");
+                answerScriptRepository.save(script);
+            }
+        } catch (InvalidStateTransitionException e) {
+            System.err.println("[RevaluationService] applyForRevaluation: script state warning: " + e.getMessage());
+        }
 
         RevaluationRequest savedRequest = revaluationRepo.save(request);
 
         notificationService.notifyStudent(student,
             "Revaluation request #" + savedRequest.getRevaluationId()
-                + " created. Fee: ₹" + revaluationFeeStrategy.calculateFee()
+                + " created. Fee: \u20b9" + revaluationFeeStrategy.calculateFee()
                 + ". Please complete payment.");
 
         return savedRequest;
     }
 
-    // ==================== PAYMENT (Step 2 — checklist §3.3) ====================
+    // ==================== PAYMENT ====================
 
     /**
-     * Processes full fee payment.
-     * On success transitions: PAYMENT_PENDING → REVALUATION_IN_PROGRESS.
-     * Satisfies: "POST /student/revaluation/{id}/pay — calls PaymentService → REVALUATION_IN_PROGRESS"
+     * On success transitions:
+     *   RevaluationRequest: PAYMENT_PENDING → REVALUATION_IN_PROGRESS
+     *   AnswerScript:       REVALUATION_PAYMENT_PENDING → REVALUATION_IN_PROGRESS (§6 row 12)
      */
     @Transactional
+    @Override
     public RevaluationRequest processRevaluationPayment(Long revaluationId) {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
@@ -108,59 +115,66 @@ public class RevaluationService {
 
         Payment payment = new Payment();
         payment.setAmount(request.getRevaluationFee());
-        payment.setPaymentType("FULL");              // FullPaymentProcessor via Abstract Factory
+        payment.setPaymentType("FULL");
         payment.setPaymentStatus("PENDING");
         payment.setStudent(request.getStudent());
 
-        Payment processedPayment = paymentService.processPayment(payment);  // Chain of Responsibility runs here
+        Payment processedPayment = paymentService.processPayment(payment);
 
         if ("SUCCESS".equals(processedPayment.getPaymentStatus())) {
-            // Transition directly to REVALUATION_IN_PROGRESS — as required by checklist §3.3
             RevaluationRequestStateMachine.transition(request, "REVALUATION_IN_PROGRESS");
 
-            // Mirror on AnswerScript state machine
+            // FIX: AnswerScript: REVALUATION_PAYMENT_PENDING → REVALUATION_IN_PROGRESS (§6 row 12)
             AnswerScript script = request.getAnswerScript();
             if (script != null) {
                 try {
-                    AnswerScriptStateMachine.transition(script, "REVALUATION_IN_PROGRESS");
+                    // Only transition if in the expected payment-pending state
+                    if ("REVALUATION_PAYMENT_PENDING".equals(script.getStatus())) {
+                        AnswerScriptStateMachine.transition(script, "REVALUATION_IN_PROGRESS");
+                    } else {
+                        // Fallback: attempt the transition; state machine will guard it
+                        AnswerScriptStateMachine.transition(script, "REVALUATION_IN_PROGRESS");
+                    }
+                    answerScriptRepository.save(script);
                 } catch (InvalidStateTransitionException e) {
                     throw new RuntimeException("Invalid script state transition: " + e.getMessage());
                 }
-                answerScriptRepository.save(script);
             }
 
             RevaluationRequest savedRequest = revaluationRepo.save(request);
             notificationService.notifyStudent(request.getStudent(),
-                "✅ Payment successful! Revaluation request #" + revaluationId
+                "\u2705 Payment successful! Revaluation request #" + revaluationId
                     + " is now IN PROGRESS. A revaluator will be assigned shortly.");
             notificationService.notifyRevaluationStatusChange(savedRequest);
-
             return savedRequest;
 
         } else {
             RevaluationRequestStateMachine.transition(request, "PAYMENT_FAILED");
             notificationService.notifyStudent(request.getStudent(),
-                "❌ Payment failed for revaluation request #" + revaluationId + ". Please try again.");
+                "\u274c Payment failed for revaluation request #" + revaluationId + ". Please try again.");
             return revaluationRepo.save(request);
         }
     }
 
     // ==================== READ ====================
 
+    @Override
     public RevaluationRequest getRevaluationById(Long revaluationId) {
         return revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found with id: " + revaluationId));
     }
 
+    @Override
     public List<RevaluationRequest> getRevaluationsByStudent(Long studentId) {
         return revaluationRepo.findByStudentUserId(studentId);
     }
 
+    @Override
     public List<RevaluationRequest> getAllRevaluations() {
         return revaluationRepo.findAll();
     }
 
-    /** Satisfies: "GET /admin/reviews/pending returns only PAYMENT_PENDING" — mirrored here for revaluations */
+    @Override
     public List<RevaluationRequest> getPendingRevaluations() {
         return revaluationRepo.findByRevaluationStatus("PAYMENT_PENDING");
     }
@@ -169,14 +183,12 @@ public class RevaluationService {
         return revaluationRepo.findByRevaluatorUserIdAndRevaluationStatus(revaluatorId, status);
     }
 
-    /**
-     * Returns requests in REVALUATION_IN_PROGRESS — the state a revaluator works on.
-     * Satisfies: "GET /revaluator/requests filters to REVALUATION_IN_PROGRESS only"
-     */
+    @Override
     public List<RevaluationRequest> getPendingForRevaluator() {
-        return revaluationRepo.findPendingForRevaluator();   // @Query filters REVALUATION_IN_PROGRESS
+        return revaluationRepo.findPendingForRevaluator();
     }
 
+    @Override
     public long countByStatus(String status) {
         return revaluationRepo.countByStatus(status);
     }
@@ -184,18 +196,19 @@ public class RevaluationService {
     // ==================== STATUS UPDATES ====================
 
     @Transactional
+    @Override
     public RevaluationRequest updateRevaluationStatus(Long revaluationId, String newStatus) {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
 
         RevaluationRequestStateMachine.transition(request, newStatus);
-
         RevaluationRequest updatedRequest = revaluationRepo.save(request);
-        notificationService.notifyRevaluationStatusChange(updatedRequest);  // Observer
+        notificationService.notifyRevaluationStatusChange(updatedRequest);
         return updatedRequest;
     }
 
     @Transactional
+    @Override
     public RevaluationRequest rejectRevaluation(Long revaluationId, String reason) {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
@@ -206,31 +219,31 @@ public class RevaluationService {
 
         notificationService.notifyStudent(request.getStudent(),
             "Revaluation request #" + revaluationId + " has been rejected. Reason: " + reason);
-
         return savedRequest;
     }
 
     @Transactional
+    @Override
     public RevaluationRequest cancelRevaluationRequest(Long revaluationId) {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
 
         RevaluationRequestStateMachine.transition(request, "CANCELLED");
         RevaluationRequest savedRequest = revaluationRepo.save(request);
-
         notificationService.notifyStudent(request.getStudent(),
             "Revaluation request #" + revaluationId + " has been cancelled.");
-
         return savedRequest;
     }
 
-    // ==================== REVALUATOR SUBMIT (checklist §3.4) ====================
+    // ==================== REVALUATOR SUBMIT ====================
 
     /**
-     * Revaluator submits new marks.
      * Satisfies: "PUT /revaluator/requests/{id}/submit → REVALUATION_COMPLETED + notifies student"
+     *
+     * AnswerScript: REVALUATION_IN_PROGRESS → REVALUATION_COMPLETED (§6 row 13)
      */
     @Transactional
+    @Override
     public RevaluationRequest submitRevaluationMarks(Long revaluationId, Float marks, String comments) {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found: " + revaluationId));
@@ -253,6 +266,7 @@ public class RevaluationService {
         script.setTotalMarks(marks);
 
         try {
+            // §6 row 13: REVALUATION_IN_PROGRESS → REVALUATION_COMPLETED
             AnswerScriptStateMachine.transition(script, "REVALUATION_COMPLETED");
         } catch (InvalidStateTransitionException e) {
             throw new RuntimeException("Invalid state transition: " + e.getMessage());
@@ -263,7 +277,7 @@ public class RevaluationService {
         RevaluationRequest savedRequest = revaluationRepo.save(request);
 
         String notificationMessage = String.format(
-            "✅ Revaluation completed for Script #%d. Marks updated from %.2f to %.2f.%s",
+            "\u2705 Revaluation completed for Script #%d. Marks updated from %.2f to %.2f.%s",
             script.getScriptId(),
             oldMarks != null ? oldMarks : 0,
             marks,
@@ -275,15 +289,10 @@ public class RevaluationService {
         return savedRequest;
     }
 
-    // ==================== ADMIN REVALUATOR ASSIGN (checklist §3.4) ====================
+    // ==================== ADMIN ASSIGN ====================
 
-    /**
-     * Admin assigns a revaluator to a REVALUATION_IN_PROGRESS request.
-     * Satisfies: "POST /admin/revaluator/assign assigns Revaluator to RevaluationRequest"
-     * The request is already in REVALUATION_IN_PROGRESS after payment; this just records
-     * which specific revaluator is responsible.
-     */
     @Transactional
+    @Override
     public Map<String, Object> assignRevaluatorToRequest(Long revaluationId, Long revaluatorId) {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
@@ -303,7 +312,6 @@ public class RevaluationService {
 
         Revaluator revaluator = (Revaluator) user;
         request.setRevaluator(revaluator);
-
         RevaluationRequest updatedRequest = revaluationRepo.save(request);
 
         notificationService.notifyStudent(request.getStudent(),
@@ -317,7 +325,6 @@ public class RevaluationService {
         response.put("status", updatedRequest.getRevaluationStatus());
         response.put("scriptStatus", request.getAnswerScript() != null
             ? request.getAnswerScript().getStatus() : "N/A");
-
         return response;
     }
 }

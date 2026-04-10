@@ -23,6 +23,13 @@ import java.util.List;
  *   Proxy            : PaymentProxy (validates amount > 0 and student exists)
  *   Decorator        : PaymentLoggingDecorator (wraps proxy for audit logging)
  *   Chain of Resp.   : 4-handler chain (amount → student → script → gateway)
+ *
+ * FIX: paymentProxy.setStudent() is now called BEFORE the validation chain runs,
+ * so the Proxy has student context at the point it needs it. Previously it was
+ * called AFTER the chain, making the proxy guard check redundant/untestable.
+ *
+ * Chain order:  amount → student exists → script status → gateway
+ * Gateway chain: Proxy (guards) → Decorator (logs) → Singleton gateway
  */
 @Service
 public class PaymentService {
@@ -32,47 +39,43 @@ public class PaymentService {
     @Autowired private UserRepository userRepository;
     @Autowired private AnswerScriptRepository answerScriptRepository;
 
-    // Chain of Responsibility handlers (Spring beans)
     @Autowired private AmountValidationHandler       amountValidationHandler;
     @Autowired private StudentExistsValidationHandler studentExistsValidationHandler;
     @Autowired private ScriptStatusValidationHandler  scriptStatusValidationHandler;
     @Autowired private GatewayValidationHandler       gatewayValidationHandler;
 
-    /**
-     * Abstract Factory: @Autowired on the FACTORY BEAN, not via static call.
-     * This means PaymentService depends on the PaymentProcessorFactory
-     * abstraction, satisfying DIP.
-     */
-    @Autowired
-    private PaymentProcessorFactory paymentProcessorFactory;
+    @Autowired private PaymentProcessorFactory paymentProcessorFactory;
 
-    // Structural pattern chain: Proxy → Decorator → Gateway
     private IPaymentGateway paymentGateway;
     private PaymentProxy    paymentProxy;
-
-    // Chain of Responsibility head
     private PaymentValidationHandler validationChain;
 
     @PostConstruct
     private void init() {
-        // ── Proxy (validates amount > 0 and student exists before gateway) ──
+        // Proxy (validates amount > 0 and student exists before gateway)
         IPaymentGateway realGateway = PaymentGatewaySingleton.getInstance();
         this.paymentProxy = new PaymentProxy(realGateway);
 
-        // ── Decorator (wraps proxy with audit logging) ───────────────────────
+        // Decorator (wraps proxy with audit logging)
         this.paymentGateway = new PaymentLoggingDecorator(paymentProxy);
 
-        // ── Chain of Responsibility ───────────────────────────────────────────
+        // Chain of Responsibility
         amountValidationHandler.setNext(studentExistsValidationHandler);
         studentExistsValidationHandler.setNext(scriptStatusValidationHandler);
         scriptStatusValidationHandler.setNext(gatewayValidationHandler);
         this.validationChain = amountValidationHandler;
 
-        System.out.println("[PaymentService] Initialized: CoR → Proxy → Decorator → Gateway");
+        System.out.println("[PaymentService] Initialized: CoR \u2192 Proxy \u2192 Decorator \u2192 Gateway");
     }
 
     @Transactional
     public Payment processPayment(Payment payment) {
+
+        // FIX: Set student on Proxy BEFORE the chain runs, so the Proxy's
+        // guard check has the student context it needs.
+        if (payment.getStudent() != null) {
+            paymentProxy.setStudent(payment.getStudent());
+        }
 
         // 1. Chain of Responsibility: amount → student exists → script status → gateway
         try {
@@ -83,14 +86,11 @@ public class PaymentService {
             return paymentRepository.save(payment);
         }
 
-        // 2. Set student on Proxy so it can do its own guard check
-        paymentProxy.setStudent(payment.getStudent());
-
-        // 3. Abstract Factory: obtain processor through the factory BEAN (not static call)
+        // 2. Abstract Factory: obtain processor through the factory BEAN
         PaymentProcessor processor = paymentProcessorFactory.getPaymentProcessor(payment.getPaymentType());
         boolean processorOk = processor.process(payment);
 
-        // 4. Proxy + Decorator: process through gateway chain
+        // 3. Proxy + Decorator: process through gateway chain
         boolean gatewayOk = paymentGateway.processTransaction(payment.getAmount());
 
         payment.setPaymentStatus((processorOk && gatewayOk) ? "SUCCESS" : "FAILED");

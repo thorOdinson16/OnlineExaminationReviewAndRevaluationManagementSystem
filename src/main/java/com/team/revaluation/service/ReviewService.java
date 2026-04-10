@@ -23,6 +23,11 @@ import java.util.List;
  * Implements IReviewService for DIP compliance.
  * Uses ReviewRequestBuilder (Builder pattern).
  * Calls NotificationService.notifyReviewStatusChange() on every status change (Observer pattern).
+ *
+ * FIX 1: applyForReview saves ReviewRequest with "PAYMENT_PENDING" (ReviewRequest-level status)
+ *         and mirrors AnswerScript to "REVIEW_REQUESTED" ONLY after payment succeeds.
+ * FIX 2: verifyReview now transitions ReviewRequest → "VERIFIED" and AnswerScript
+ *         → "AWAIT_STUDENT_DECISION" (per §6: ReviewCompleted → AwaitStudentDecision).
  */
 @Service
 public class ReviewService implements IReviewService {
@@ -58,7 +63,7 @@ public class ReviewService implements IReviewService {
 
         notificationService.notifyStudent(saved.getStudent(),
             "Review request #" + saved.getReviewId() +
-            " created. Fee: ₹" + fee + ". Please complete payment.");
+            " created. Fee: \u20b9" + fee + ". Please complete payment.");
 
         return saved;
     }
@@ -96,8 +101,9 @@ public class ReviewService implements IReviewService {
     /**
      * Satisfies: "POST /student/review/{reviewId}/pay → status = REVIEW_REQUESTED"
      *
-     * On payment success, mirrors REVIEW_REQUESTED on the AnswerScript using the
-     * spec-aligned transition: RESULTS_PUBLISHED → REVIEW_REQUESTED.
+     * On payment success:
+     *   ReviewRequest: PAYMENT_PENDING → REVIEW_REQUESTED
+     *   AnswerScript:  RESULTS_PUBLISHED → REVIEW_REQUESTED  (§6, row 4)
      */
     @Override
     @Transactional
@@ -111,16 +117,17 @@ public class ReviewService implements IReviewService {
 
         Payment payment = new Payment();
         payment.setAmount(request.getReviewFee());
-        payment.setPaymentType("PARTIAL");    // review fee is a partial payment
+        payment.setPaymentType("PARTIAL");
         payment.setPaymentStatus("PENDING");
         payment.setStudent(request.getStudent());
 
         Payment processed = paymentService.processPayment(payment);
 
         if ("SUCCESS".equals(processed.getPaymentStatus())) {
+            // ReviewRequest-level: PAYMENT_PENDING → REVIEW_REQUESTED
             ReviewRequestStateMachine.transition(request, "REVIEW_REQUESTED");
 
-            // Mirror on AnswerScript: RESULTS_PUBLISHED → REVIEW_REQUESTED
+            // AnswerScript: RESULTS_PUBLISHED → REVIEW_REQUESTED  (§6 row 4)
             AnswerScript script = request.getAnswerScript();
             if (script != null) {
                 try {
@@ -176,11 +183,39 @@ public class ReviewService implements IReviewService {
 
     /**
      * Satisfies: "PUT /evaluator/scripts/{scriptId}/verify → RESULTS_PUBLISHED"
-     * Verifies the review and transitions ReviewRequest → VERIFIED.
+     *
+     * Transitions ReviewRequest → VERIFIED.
+     * Also advances AnswerScript through REVIEW_COMPLETED → AWAIT_STUDENT_DECISION (§6 rows 8-9).
      */
     @Override
     @Transactional
     public ReviewRequest verifyReview(Long reviewId) {
-        return updateReviewStatus(reviewId, "VERIFIED");
+        ReviewRequest request = reviewRequestRepository.findById(reviewId)
+            .orElseThrow(() -> new RuntimeException("Review request not found: " + reviewId));
+
+        ReviewRequestStateMachine.transition(request, "VERIFIED");
+
+        // Advance AnswerScript: REVIEW_IN_PROGRESS → REVIEW_COMPLETED → AWAIT_STUDENT_DECISION
+        AnswerScript script = request.getAnswerScript();
+        if (script != null) {
+            try {
+                String currentStatus = script.getStatus();
+                // If still in REVIEW_IN_PROGRESS, complete then move to decision state
+                if ("REVIEW_IN_PROGRESS".equals(currentStatus)) {
+                    AnswerScriptStateMachine.transition(script, "REVIEW_COMPLETED");
+                    AnswerScriptStateMachine.transition(script, "AWAIT_STUDENT_DECISION");
+                } else if ("REVIEW_COMPLETED".equals(currentStatus)) {
+                    AnswerScriptStateMachine.transition(script, "AWAIT_STUDENT_DECISION");
+                }
+                answerScriptRepository.save(script);
+            } catch (com.team.revaluation.exception.InvalidStateTransitionException e) {
+                // Log but don't fail — the review verification should proceed
+                System.err.println("[ReviewService] verifyReview: script state transition warning: " + e.getMessage());
+            }
+        }
+
+        ReviewRequest updated = reviewRequestRepository.save(request);
+        notificationService.notifyReviewStatusChange(updated);
+        return updated;
     }
 }
