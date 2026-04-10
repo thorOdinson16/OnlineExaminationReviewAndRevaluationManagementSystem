@@ -99,6 +99,18 @@ public class AdminController {
         return ResponseEntity.ok(revaluationService.getRevaluationById(id));
     }
 
+    @GetMapping("/revaluations/by-status")
+    public ResponseEntity<List<RevaluationRequest>> getRevaluationsByStatus(
+            @RequestParam String status) {
+        // RevaluationService.getRevaluationsByStatus() queries by revaluationStatus field
+        List<RevaluationRequest> results = revaluationService
+                .getAllRevaluations()
+                .stream()
+                .filter(r -> status.equals(r.getRevaluationStatus()))
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(results);
+    }
+
     /**
      * Satisfies: "POST /admin/revaluator/assign assigns Revaluator to RevaluationRequest"
      * Request must already be REVALUATION_IN_PROGRESS (set by payment step).

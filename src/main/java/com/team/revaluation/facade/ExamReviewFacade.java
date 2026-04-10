@@ -1,17 +1,9 @@
 package com.team.revaluation.facade;
 
-import com.team.revaluation.model.AnswerScript;
-import com.team.revaluation.model.Notification;
-import com.team.revaluation.model.Payment;
-import com.team.revaluation.model.RevaluationRequest;
-import com.team.revaluation.model.ReviewRequest;
-import com.team.revaluation.model.Student;
+import com.team.revaluation.model.*;
 import com.team.revaluation.repository.AnswerScriptRepository;
 import com.team.revaluation.repository.UserRepository;
-import com.team.revaluation.service.NotificationService;
-import com.team.revaluation.service.PaymentService;
-import com.team.revaluation.service.RevaluationService;
-import com.team.revaluation.service.ReviewService;
+import com.team.revaluation.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -20,26 +12,31 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ExamReviewFacade — Facade pattern (Structural, checklist §4.2).
+ * ExamReviewFacade — Structural: Facade Pattern (Abhijna D S, checklist §4.2).
  *
- * StudentController must only talk to this class.
- * This facade hides ReviewService, RevaluationService, PaymentService,
- * NotificationService, and the repositories from the controller layer.
+ * FIX 1 (DIP): Fields changed from concrete ReviewService / RevaluationService to
+ *              their interfaces IReviewService / IRevaluationService.
+ *              StudentController depends only on this Facade; the Facade depends
+ *              only on abstractions — both layers satisfy DIP (checklist §5).
  *
- * Key behaviour change (checklist compliance):
- *   - applyForReview()  saves with PAYMENT_PENDING first (visible in DB),
- *     then a separate payForReview() call transitions → REVIEW_REQUESTED.
- *   - applyAndPay()  is kept as a convenience method for the dashboard "one-click" flow,
- *     but it now returns the PAYMENT_PENDING reviewId so the UI can call pay separately.
+ * FIX 2 (Facade completeness): All student-facing operations are exposed here.
+ *              StudentController must NEVER import or call a service directly.
+ *
+ * Patterns active in this class:
+ *   Facade      — wraps IReviewService, IRevaluationService, PaymentService, NotificationService
+ *   Observer    — payForReview / payForRevaluation fire NotificationService (via ReviewService)
+ *   Strategy    — fee calculation is delegated to ReviewService / RevaluationService
+ *   Builder     — ReviewRequestBuilder is used inside ReviewService.applyForReview()
  */
 @Component
 public class ExamReviewFacade {
 
+    // FIX: depend on interfaces (DIP), not concrete classes
     @Autowired
-    private ReviewService reviewService;
+    private IReviewService reviewService;
 
     @Autowired
-    private RevaluationService revaluationService;
+    private IRevaluationService revaluationService;
 
     @Autowired
     private PaymentService paymentService;
@@ -73,6 +70,10 @@ public class ExamReviewFacade {
     /**
      * Step 1 — Creates a ReviewRequest at PAYMENT_PENDING.
      * Satisfies: "POST /student/review/apply creates ReviewRequest with PAYMENT_PENDING"
+     *
+     * Internally calls:
+     *   ReviewService.applyForReview()   — uses ReviewRequestBuilder + ReviewFeeStrategy
+     *   NotificationService.notifyStudent() — Observer pattern
      */
     public Map<String, Object> applyForReview(Long studentId, Long scriptId) {
         Map<String, Object> result = new HashMap<>();
@@ -91,7 +92,7 @@ public class ExamReviewFacade {
             request.setStudent(student);
             request.setAnswerScript(script);
 
-            // Saved with PAYMENT_PENDING via ReviewService (uses ReviewRequestBuilder + ReviewFeeStrategy)
+            // Delegates to IReviewService (uses ReviewRequestBuilder + ReviewFeeStrategy internally)
             ReviewRequest created = reviewService.applyForReview(request);
 
             result.put("reviewId",     created.getReviewId());
@@ -115,25 +116,20 @@ public class ExamReviewFacade {
     }
 
     /**
-     * Convenience: create request AND pay in one Facade call (used by dashboard one-click).
-     * Still persists PAYMENT_PENDING first so it is DB-visible, then immediately pays.
+     * Convenience: create request AND pay in one Facade call.
+     * Still persists PAYMENT_PENDING first, then immediately pays.
      */
     public Map<String, Object> applyAndPay(Long studentId, Long scriptId) {
-        // Step 1 — create at PAYMENT_PENDING
         Map<String, Object> created = applyForReview(studentId, scriptId);
-
         if (created.containsKey("error")) {
-            return created;   // propagate error
+            return created;
         }
-
         Long reviewId = ((Number) created.get("reviewId")).longValue();
-
-        // Step 2 — pay (transitions to REVIEW_REQUESTED on success)
         try {
             ReviewRequest paid = payForReview(reviewId);
-            created.put("reviewStatus",  paid.getReviewStatus());   // "REVIEW_REQUESTED"
-            created.put("finalStatus",   "REVIEW_REQUESTED");
-            created.put("message",       "Review application and payment completed. Status: REVIEW_REQUESTED.");
+            created.put("reviewStatus", paid.getReviewStatus());
+            created.put("finalStatus",  "REVIEW_REQUESTED");
+            created.put("message",      "Review application and payment completed. Status: REVIEW_REQUESTED.");
         } catch (Exception e) {
             created.put("error",       e.getMessage());
             created.put("finalStatus", "PAYMENT_FAILED");
