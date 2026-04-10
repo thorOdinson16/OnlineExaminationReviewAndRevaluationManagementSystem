@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Evaluator - Pending Scripts | Exam Review System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a237e 0%, #1976d2 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: white;
+            padding: 22px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .header h1 { font-size: 26px; color: #1a237e; }
+        .header h1 i { color: #1976d2; margin-right: 10px; }
+
+        .nav {
+            background: white;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 10px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav a {
+            color: #475569;
+            padding: 10px 22px;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 40px;
+            transition: all 0.3s ease;
+        }
+
+        .nav a:hover, .nav a.active {
+            background: linear-gradient(135deg, #1a237e 0%, #1976d2 100%);
+            color: white;
+        }
+
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 28px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #1a237e;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th {
+            background: #f8fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #1a237e;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        tr:hover { background: #f8fafc; }
+
+        .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-under-eval { background: #dbeafe; color: #1976d2; }
+        .status-evaluated  { background: #d1fae5; color: #059669; }
+        .status-published  { background: #f3e8ff; color: #7c3aed; }
+
+        button {
+            background: linear-gradient(135deg, #1a237e 0%, #1976d2 100%);
+            color: white;
+            padding: 7px 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 0 3px;
+        }
+
+        button:hover { transform: translateY(-1px); }
+        button.verify-btn { background: #059669; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 32px;
+            border-radius: 20px;
+            width: 420px;
+            max-width: 90%;
+        }
+
+        .modal-content h3 { margin-bottom: 16px; color: #1a237e; }
+
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: #334155; }
+        .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #1976d2;
+        }
+
+        .empty-state { text-align: center; padding: 40px; color: #94a3b8; }
+        .empty-state i { font-size: 48px; margin-bottom: 12px; color: #cbd5e1; display: block; }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active, .tab-btn:hover {
+            background: linear-gradient(135deg, #1a237e 0%, #1976d2 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-file-alt"></i> Evaluator — Answer Scripts</h1>
+        <p>Review and evaluate assigned answer scripts</p>
+    </div>
+
+    <div class="nav">
+        <a href="/evaluator/dashboard">Dashboard</a>
+        <a href="/view/evaluator/scripts" class="active">Answer Scripts</a>
+        <a href="/login" onclick="logout()">Logout</a>
+    </div>
+
+    <div class="container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="loadScripts('pending', this)">
+                <i class="fas fa-clock"></i> Pending (Under Evaluation)
+            </button>
+            <button class="tab-btn" onclick="loadScripts('evaluated', this)">
+                <i class="fas fa-check"></i> Evaluated
+            </button>
+        </div>
+
+        <!-- Scripts Table -->
+        <div class="section">
+            <h2 id="sectionTitle"><i class="fas fa-list"></i> Scripts Under Evaluation</h2>
+            <div id="scriptsList">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading scripts...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit Marks Modal -->
+    <div id="submitModal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-pen"></i> Submit Marks</h3>
+            <p style="color:#64748b; margin-bottom:16px;">Script ID: <strong id="modalScriptId"></strong></p>
+            <div class="form-group">
+                <label>Marks Obtained</label>
+                <input type="number" id="marksInput" min="0" max="100" step="0.5" placeholder="Enter marks (e.g. 78.5)">
+            </div>
+            <button onclick="confirmSubmitMarks()">Submit Marks</button>
+            <button onclick="closeModal('submitModal')" style="background:#64748b; margin-top:8px;">Cancel</button>
+            <div id="submitMessage" style="margin-top:12px; font-size:13px;"></div>
+        </div>
+    </div>
+
+    <!-- Verify / Publish Modal -->
+    <div id="verifyModal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-check-circle"></i> Publish Results</h3>
+            <p style="color:#64748b; margin-bottom:16px;">
+                Publish results for Script ID: <strong id="verifyScriptId"></strong>?<br>
+                This will transition the script to <strong>RESULTS_PUBLISHED</strong>.
+            </p>
+            <button class="verify-btn" onclick="confirmVerify()">Publish Results</button>
+            <button onclick="closeModal('verifyModal')" style="background:#64748b; margin-top:8px;">Cancel</button>
+            <div id="verifyMessage" style="margin-top:12px; font-size:13px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentScriptId = null;
+
+        function logout() {
+            localStorage.removeItem('userId');
+            localStorage.removeItem('role');
+            localStorage.removeItem('userName');
+        }
+
+        async function loadScripts(type, btn) {
+            // Update active tab
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            const sectionTitle = document.getElementById('sectionTitle');
+            const container    = document.getElementById('scriptsList');
+
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>';
+
+            let url;
+            if (type === 'pending') {
+                url = '/evaluator/scripts/pending';
+                sectionTitle.innerHTML = '<i class="fas fa-list"></i> Scripts Under Evaluation';
+            } else {
+                url = '/evaluator/scripts/evaluated';
+                sectionTitle.innerHTML = '<i class="fas fa-check-circle"></i> Evaluated Scripts';
+            }
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Server error: ' + response.status);
+                const scripts = await response.json();
+
+                if (!scripts || scripts.length === 0) {
+                    container.innerHTML = `<div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No scripts found in this category.</p>
+                    </div>`;
+                    return;
+                }
+
+                let html = `<table>
+                    <thead>
+                        <tr>
+                            <th>Script ID</th>
+                            <th>Student</th>
+                            <th>USN</th>
+                            <th>Subject</th>
+                            <th>Marks</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                scripts.forEach(script => {
+                    const statusClass = script.status === 'UNDER_EVALUATION' ? 'status-under-eval'
+                                      : script.status === 'EVALUATED'        ? 'status-evaluated'
+                                      : 'status-published';
+
+                    let actions = '';
+                    if (script.status === 'UNDER_EVALUATION') {
+                        actions = `<button onclick="openSubmitModal(${script.scriptId})">
+                                       <i class="fas fa-pen"></i> Submit Marks
+                                   </button>`;
+                    } else if (script.status === 'EVALUATED') {
+                        actions = `<button class="verify-btn" onclick="openVerifyModal(${script.scriptId})">
+                                       <i class="fas fa-upload"></i> Publish Results
+                                   </button>`;
+                    } else {
+                        actions = `<span style="color:#94a3b8; font-size:12px;">No actions</span>`;
+                    }
+
+                    html += `<tr>
+                        <td><strong>#${script.scriptId}</strong></td>
+                        <td>${script.student?.name || 'N/A'}</td>
+                        <td>${script.student?.usn  || 'N/A'}</td>
+                        <td>${script.exam?.subject || 'N/A'}</td>
+                        <td>${script.totalMarks != null ? script.totalMarks : '—'}</td>
+                        <td><span class="status ${statusClass}">${script.status}</span></td>
+                        <td>${actions}</td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                container.innerHTML = `<div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error loading scripts: ${error.message}</p>
+                </div>`;
+            }
+        }
+
+        // ── Submit Marks ────────────────────────────────────────────────────────
+
+        function openSubmitModal(scriptId) {
+            currentScriptId = scriptId;
+            document.getElementById('modalScriptId').textContent = scriptId;
+            document.getElementById('marksInput').value = '';
+            document.getElementById('submitMessage').textContent = '';
+            document.getElementById('submitModal').style.display = 'flex';
+        }
+
+        async function confirmSubmitMarks() {
+            const marks = parseFloat(document.getElementById('marksInput').value);
+            const msgEl = document.getElementById('submitMessage');
+
+            if (isNaN(marks) || marks < 0) {
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = 'Please enter valid marks (≥ 0).';
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `/evaluator/scripts/${currentScriptId}/submit?marks=${marks}`,
+                    { method: 'PUT' }
+                );
+                const result = await response.json();
+
+                if (response.ok) {
+                    msgEl.style.color = '#059669';
+                    msgEl.textContent = `✅ Marks submitted! Status: ${result.status}`;
+                    setTimeout(() => { closeModal('submitModal'); loadScripts('pending', null); }, 1500);
+                } else {
+                    msgEl.style.color = '#dc2626';
+                    msgEl.textContent = '❌ ' + (result.message || 'Failed to submit marks.');
+                }
+            } catch (error) {
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = '❌ Network error. Please try again.';
+            }
+        }
+
+        // ── Verify / Publish ────────────────────────────────────────────────────
+
+        function openVerifyModal(scriptId) {
+            currentScriptId = scriptId;
+            document.getElementById('verifyScriptId').textContent = scriptId;
+            document.getElementById('verifyMessage').textContent  = '';
+            document.getElementById('verifyModal').style.display  = 'flex';
+        }
+
+        async function confirmVerify() {
+            const msgEl = document.getElementById('verifyMessage');
+            try {
+                const response = await fetch(
+                    `/evaluator/scripts/${currentScriptId}/verify`,
+                    { method: 'PUT' }
+                );
+                const result = await response.json();
+
+                if (response.ok) {
+                    msgEl.style.color = '#059669';
+                    msgEl.textContent = `✅ Results published! Status: ${result.status}`;
+                    setTimeout(() => { closeModal('verifyModal'); loadScripts('evaluated', null); }, 1500);
+                } else {
+                    msgEl.style.color = '#dc2626';
+                    msgEl.textContent = '❌ ' + (result.message || 'Failed to publish results.');
+                }
+            } catch (error) {
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = '❌ Network error. Please try again.';
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+            currentScriptId = null;
+        }
+
+        // Load pending scripts on page load
+        loadScripts('pending', document.querySelector('.tab-btn.active'));
+    </script>
+</body>
+</html>

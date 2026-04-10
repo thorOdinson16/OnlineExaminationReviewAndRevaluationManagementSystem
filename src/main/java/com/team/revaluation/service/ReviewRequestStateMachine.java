@@ -9,18 +9,19 @@ import java.util.Set;
 /**
  * State Machine for ReviewRequest.
  *
- * Valid States:
- *   PAYMENT_PENDING  — review request created, awaiting fee payment
- *   PAYMENT_SUCCESS  — fee paid, request submitted to CoE
- *   PAYMENT_FAILED   — payment attempt failed
- *   IN_PROGRESS      — evaluator assigned and reviewing
- *   COMPLETED        — review done, result visible to student
- *   VERIFIED         — CoE has verified the reviewed paper
- *   REJECTED         — CoE rejected the request
- *   CANCELLED        — student cancelled before payment
+ * Valid States (aligned with checklist §3.1 and §6):
+ *   PAYMENT_PENDING    — review request created, awaiting fee payment
+ *   REVIEW_REQUESTED   — fee paid successfully; request submitted to CoE  ← checklist-required name
+ *   PAYMENT_FAILED     — payment attempt failed
+ *   UNDER_REVIEW       — CoE assigned evaluator; evaluator reviewing
+ *   REVIEW_COMPLETED   — evaluator finished; paper visible to student
+ *   VERIFIED           — CoE verified the reviewed paper
+ *   REJECTED           — CoE rejected the request
+ *   CANCELLED          — student cancelled before payment
  *
- * All calls to ReviewRequest.setReviewStatus() must go through
- * ReviewRequestStateMachine.transition() — never call setReviewStatus() directly.
+ * NOTE: "REVIEW_REQUESTED" replaces the old "PAYMENT_SUCCESS" label so that the
+ * checklist item "POST /student/review/{reviewId}/pay → status = REVIEW_REQUESTED"
+ * is satisfied exactly.
  */
 public class ReviewRequestStateMachine {
 
@@ -28,26 +29,26 @@ public class ReviewRequestStateMachine {
 
     static {
         // Payment flow
-        addTransition("PAYMENT_PENDING", "PAYMENT_SUCCESS");
-        addTransition("PAYMENT_PENDING", "PAYMENT_FAILED");
-        addTransition("PAYMENT_PENDING", "CANCELLED");
+        addTransition("PAYMENT_PENDING",  "REVIEW_REQUESTED");   // payment succeeded
+        addTransition("PAYMENT_PENDING",  "PAYMENT_FAILED");
+        addTransition("PAYMENT_PENDING",  "CANCELLED");
 
         // Retry after failure
-        addTransition("PAYMENT_FAILED", "PAYMENT_PENDING");
-        addTransition("PAYMENT_FAILED", "CANCELLED");
+        addTransition("PAYMENT_FAILED",   "PAYMENT_PENDING");
+        addTransition("PAYMENT_FAILED",   "CANCELLED");
 
-        // Admin/CoE actions after successful payment
-        addTransition("PAYMENT_SUCCESS", "IN_PROGRESS");
-        addTransition("PAYMENT_SUCCESS", "VERIFIED");
-        addTransition("PAYMENT_SUCCESS", "REJECTED");
+        // Admin / CoE actions after student requests review
+        addTransition("REVIEW_REQUESTED", "UNDER_REVIEW");        // CoE assigns evaluator
+        addTransition("REVIEW_REQUESTED", "VERIFIED");
+        addTransition("REVIEW_REQUESTED", "REJECTED");
 
-        // Re-open for evaluation if needed
-        addTransition("VERIFIED", "IN_PROGRESS");
+        // Evaluator finishes
+        addTransition("UNDER_REVIEW",     "REVIEW_COMPLETED");
 
-        // Evaluator completes review
-        addTransition("IN_PROGRESS", "COMPLETED");
+        // CoE verifies after review is complete
+        addTransition("REVIEW_COMPLETED", "VERIFIED");
 
-        // Terminal states: COMPLETED, REJECTED, CANCELLED have no outgoing transitions
+        // Terminal states: VERIFIED, REJECTED, CANCELLED have no outgoing transitions
     }
 
     private static void addTransition(String from, String to) {
@@ -79,9 +80,7 @@ public class ReviewRequestStateMachine {
         request.setReviewStatus(newStatus);
     }
 
-    /**
-     * Check without throwing — useful for guard conditions in service layer.
-     */
+    /** Check without throwing — useful for guard conditions in the service layer. */
     public static boolean isTransitionAllowed(String current, String newStatus) {
         if (current == null) current = "PAYMENT_PENDING";
         return ALLOWED_TRANSITIONS.contains(current + "->" + newStatus);

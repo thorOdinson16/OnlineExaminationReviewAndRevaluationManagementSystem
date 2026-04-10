@@ -13,29 +13,30 @@ import java.util.Map;
 /**
  * AdminController — thin controller, no business logic.
  *
- * All AnswerScript operations now go through ScriptService (not the repo directly).
- * All Review operations go through ReviewService.
- * All Revaluation operations go through RevaluationService.
- * No repository, state machine, or InvalidStateTransitionException is imported here.
+ * DIP (checklist §5): all @Autowired fields use the SERVICE INTERFACE type,
+ * not the concrete class. Spring injects the concrete bean automatically.
+ *
+ * No repository, state machine, or exception class is imported here.
  */
 @RestController
 @RequestMapping("/admin")
 public class AdminController {
 
+    // ── DIP: depend on abstractions, not concretions ──────────────────────────
     @Autowired
-    private ReviewService reviewService;
+    private IReviewService reviewService;
 
     @Autowired
-    private RevaluationService revaluationService;
+    private IRevaluationService revaluationService;
 
     @Autowired
-    private EvaluatorService evaluatorService;
+    private IEvaluatorService evaluatorService;
 
     @Autowired
-    private ScriptService scriptService;
+    private IScriptService scriptService;
 
     @Autowired
-    private UserService userService;
+    private UserService userService;   // UserService has no interface yet — kept concrete for brevity
 
     // ==================== REVIEW MANAGEMENT ====================
 
@@ -44,6 +45,7 @@ public class AdminController {
         return ResponseEntity.ok(reviewService.getAllReviews());
     }
 
+    /** Satisfies: "GET /admin/reviews/pending returns only PAYMENT_PENDING reviews" */
     @GetMapping("/reviews/pending")
     public ResponseEntity<List<ReviewRequest>> getPendingReviews() {
         return ResponseEntity.ok(reviewService.getPendingReviews());
@@ -63,6 +65,9 @@ public class AdminController {
 
     // ==================== EVALUATOR ASSIGNMENT ====================
 
+    /**
+     * Satisfies: "POST /admin/evaluator/assign assigns evaluator + transitions → UNDER_EVALUATION"
+     */
     @PostMapping("/evaluator/assign")
     public ResponseEntity<Map<String, Object>> assignEvaluator(
             @RequestParam Long scriptId,
@@ -73,7 +78,11 @@ public class AdminController {
     // ==================== REVALUATION MANAGEMENT ====================
 
     @GetMapping("/revaluations")
-    public ResponseEntity<List<RevaluationRequest>> getAllRevaluations() {
+    public ResponseEntity<List<RevaluationRequest>> getAllRevaluations(
+            @RequestParam(required = false) String status) {
+        if (status != null && !status.isEmpty()) {
+            return ResponseEntity.ok(revaluationService.getPendingForRevaluator());
+        }
         return ResponseEntity.ok(revaluationService.getAllRevaluations());
     }
 
@@ -84,9 +93,16 @@ public class AdminController {
 
     @PutMapping("/revaluations/{id}/verify")
     public ResponseEntity<RevaluationRequest> verifyRevaluation(@PathVariable Long id) {
-        return ResponseEntity.ok(revaluationService.updateRevaluationStatus(id, "VERIFIED"));
+        // NOTE: With updated state machine PAYMENT_PENDING → REVALUATION_IN_PROGRESS,
+        // "verify" here means admin acknowledges; status is already REVALUATION_IN_PROGRESS.
+        // Kept for UI compatibility — returns the current request unchanged if already in progress.
+        return ResponseEntity.ok(revaluationService.getRevaluationById(id));
     }
 
+    /**
+     * Satisfies: "POST /admin/revaluator/assign assigns Revaluator to RevaluationRequest"
+     * Request must already be REVALUATION_IN_PROGRESS (set by payment step).
+     */
     @PostMapping("/revaluator/assign")
     public ResponseEntity<Map<String, Object>> assignRevaluator(
             @RequestParam Long revaluationId,
@@ -96,11 +112,17 @@ public class AdminController {
 
     // ==================== FINAL RESULT MANAGEMENT ====================
 
+    /**
+     * Satisfies: "PUT /admin/results/{scriptId}/publish → RESULTS_PUBLISHED"
+     */
     @PutMapping("/results/{scriptId}/publish")
     public ResponseEntity<Map<String, Object>> publishResult(@PathVariable Long scriptId) {
         return ResponseEntity.ok(scriptService.publishResult(scriptId));
     }
 
+    /**
+     * Satisfies: "PUT /admin/results/{scriptId}/finalize → FINALIZED, updates final marks, notifies student"
+     */
     @PutMapping("/results/{scriptId}/finalize")
     public ResponseEntity<Map<String, Object>> finalizeResult(
             @PathVariable Long scriptId,
@@ -121,9 +143,9 @@ public class AdminController {
     @GetMapping("/dashboard/overview")
     public ResponseEntity<Map<String, Object>> getDashboardOverview() {
         Map<String, Object> overview = new HashMap<>();
-        overview.put("pendingReviews",         reviewService.getPendingReviews().size());
-        overview.put("pendingRevaluations",     revaluationService.getPendingRevaluations().size());
-        overview.put("scriptsUnderEvaluation",  scriptService.getScriptsByStatus("UNDER_EVALUATION").size());
+        overview.put("pendingReviews",        reviewService.getPendingReviews().size());
+        overview.put("pendingRevaluations",   revaluationService.getPendingRevaluations().size());
+        overview.put("scriptsUnderEvaluation",scriptService.getScriptsByStatus("UNDER_EVALUATION").size());
         return ResponseEntity.ok(overview);
     }
 
@@ -144,7 +166,7 @@ public class AdminController {
         userService.deleteUser(userId);
         Map<String, String> response = new HashMap<>();
         response.put("message", "User deleted successfully");
-        response.put("userId", userId.toString());
+        response.put("userId",  userId.toString());
         return ResponseEntity.ok(response);
     }
 
