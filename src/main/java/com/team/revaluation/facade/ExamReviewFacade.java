@@ -42,27 +42,18 @@ public class ExamReviewFacade {
     private PaymentService paymentService;
 
     @Autowired
-    private NotificationService notificationService;
-
-    @Autowired
-    private AnswerScriptRepository answerScriptRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    // ==================== RESULTS ====================
+    private IScriptService scriptService;
 
     public List<AnswerScript> getStudentResults(Long studentId) {
-        return answerScriptRepository.findByStudentUserId(studentId);
+        return scriptService.getScriptsByStudent(studentId);
     }
 
     public List<AnswerScript> getAllResults() {
-        return answerScriptRepository.findAllWithDetails();
+        return scriptService.getAllScripts();
     }
 
     public AnswerScript getScriptResult(Long scriptId) {
-        return answerScriptRepository.findById(scriptId)
-                .orElseThrow(() -> new RuntimeException("Script not found with id: " + scriptId));
+        return scriptService.getScriptById(scriptId);
     }
 
     // ==================== REVIEW FLOW ====================
@@ -75,38 +66,32 @@ public class ExamReviewFacade {
      *   ReviewService.applyForReview()   — uses ReviewRequestBuilder + ReviewFeeStrategy
      *   NotificationService.notifyStudent() — Observer pattern
      */
-    public Map<String, Object> applyForReview(Long studentId, Long scriptId) {
-        Map<String, Object> result = new HashMap<>();
-        try {
-            Student student = (Student) userRepository.findById(studentId)
-                    .orElseThrow(() -> new RuntimeException("Student not found"));
+public Map<String, Object> applyForReview(Long studentId, Long scriptId) {
+    Map<String, Object> result = new HashMap<>();
+    try {
+        ReviewRequest request = new ReviewRequest();
+        
+        Student student = new Student();
+        student.setUserId(studentId);
+        request.setStudent(student);
 
-            AnswerScript script = answerScriptRepository.findById(scriptId)
-                    .orElseThrow(() -> new RuntimeException("Script not found"));
+        AnswerScript script = new AnswerScript();
+        script.setScriptId(scriptId);
+        request.setAnswerScript(script);
 
-            if (!script.getStatus().equals("EVALUATED") && !script.getStatus().equals("RESULTS_PUBLISHED")) {
-                throw new RuntimeException("Script not eligible for review. Status: " + script.getStatus());
-            }
+        ReviewRequest created = reviewService.applyForReview(request);
 
-            ReviewRequest request = new ReviewRequest();
-            request.setStudent(student);
-            request.setAnswerScript(script);
+        result.put("reviewId",     created.getReviewId());
+        result.put("reviewFee",    created.getReviewFee());
+        result.put("reviewStatus", created.getReviewStatus());
+        result.put("message",      "Review request created. Please complete payment.");
 
-            // Delegates to IReviewService (uses ReviewRequestBuilder + ReviewFeeStrategy internally)
-            ReviewRequest created = reviewService.applyForReview(request);
-
-            result.put("reviewId",     created.getReviewId());
-            result.put("reviewFee",    created.getReviewFee());
-            result.put("reviewStatus", created.getReviewStatus());   // "PAYMENT_PENDING"
-            result.put("message",      "Review request created. Please complete payment.");
-
-        } catch (Exception e) {
-            result.put("error",   e.getMessage());
-            result.put("message", "Failed to apply for review: " + e.getMessage());
-        }
-        return result;
+    } catch (Exception e) {
+        result.put("error",   e.getMessage());
+        result.put("message", "Failed to apply for review: " + e.getMessage());
     }
-
+    return result;
+}
     /**
      * Step 2 — Processes payment; transitions PAYMENT_PENDING → REVIEW_REQUESTED.
      * Satisfies: "POST /student/review/{reviewId}/pay → status = REVIEW_REQUESTED"

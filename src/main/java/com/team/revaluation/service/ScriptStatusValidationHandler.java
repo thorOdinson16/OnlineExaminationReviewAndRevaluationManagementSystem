@@ -3,7 +3,6 @@ package com.team.revaluation.service;
 import com.team.revaluation.model.Payment;
 import com.team.revaluation.model.ReviewRequest;
 import com.team.revaluation.model.RevaluationRequest;
-import com.team.revaluation.repository.AnswerScriptRepository;
 import com.team.revaluation.repository.ReviewRequestRepository;
 import com.team.revaluation.repository.RevaluationRequestRepository;
 import com.team.revaluation.repository.UserRepository;
@@ -25,14 +24,8 @@ import java.util.List;
 @Component
 public class ScriptStatusValidationHandler extends PaymentValidationHandler {
 
-    private AnswerScriptRepository answerScriptRepository;
     private ReviewRequestRepository reviewRequestRepository;
     private RevaluationRequestRepository revaluationRequestRepository;
-
-    @Autowired
-    public void setAnswerScriptRepository(AnswerScriptRepository repo) {
-        this.answerScriptRepository = repo;
-    }
 
     @Autowired
     public void setReviewRequestRepository(ReviewRequestRepository repo) {

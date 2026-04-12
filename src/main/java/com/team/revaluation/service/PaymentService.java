@@ -7,7 +7,6 @@ import com.team.revaluation.model.Student;
 import com.team.revaluation.repository.NotificationRepository;
 import com.team.revaluation.repository.PaymentRepository;
 import com.team.revaluation.repository.UserRepository;
-import com.team.revaluation.repository.AnswerScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,8 +36,6 @@ public class PaymentService {
     @Autowired private PaymentRepository paymentRepository;
     @Autowired private NotificationRepository notificationRepository;
     @Autowired private UserRepository userRepository;
-    @Autowired private AnswerScriptRepository answerScriptRepository;
-
     @Autowired private AmountValidationHandler       amountValidationHandler;
     @Autowired private StudentExistsValidationHandler studentExistsValidationHandler;
     @Autowired private ScriptStatusValidationHandler  scriptStatusValidationHandler;
@@ -73,9 +70,12 @@ public class PaymentService {
 
         // FIX: Set student on Proxy BEFORE the chain runs, so the Proxy's
         // guard check has the student context it needs.
-        if (payment.getStudent() != null) {
-            paymentProxy.setStudent(payment.getStudent());
+        if (payment.getStudent() == null) {
+            payment.setPaymentStatus("FAILED");
+            System.err.println("[PaymentService] Payment rejected: student is null.");
+            return paymentRepository.save(payment);
         }
+        paymentProxy.setStudent(payment.getStudent());
 
         // 1. Chain of Responsibility: amount → student exists → script status → gateway
         try {

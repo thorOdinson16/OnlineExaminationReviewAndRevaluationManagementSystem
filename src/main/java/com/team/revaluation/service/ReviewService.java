@@ -2,8 +2,10 @@ package com.team.revaluation.service;
 
 import com.team.revaluation.model.AnswerScript;
 import com.team.revaluation.model.ReviewRequest;
+import com.team.revaluation.model.Student;
 import com.team.revaluation.model.Payment;
 import com.team.revaluation.repository.ReviewRequestRepository;
+import com.team.revaluation.repository.UserRepository;
 import com.team.revaluation.builder.ReviewRequestBuilder;
 import com.team.revaluation.repository.AnswerScriptRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +38,7 @@ public class ReviewService implements IReviewService {
     @Autowired private AnswerScriptRepository   answerScriptRepository;
     @Autowired private PaymentService           paymentService;
     @Autowired private NotificationService      notificationService;
-
+    @Autowired private UserRepository userRepository;
     @Autowired
     @Qualifier("reviewFeeStrategy")
     private FeeCalculationStrategy reviewFeeStrategy;
@@ -50,11 +52,20 @@ public class ReviewService implements IReviewService {
     @Override
     @Transactional
     public ReviewRequest applyForReview(ReviewRequest request) {
-        Float fee = reviewFeeStrategy.calculateFee();   // ReviewFeeStrategy — not hardcoded
+        // Fetch real entities from DB using the IDs passed by Facade
+        Student student = (Student) userRepository.findById(
+            request.getStudent().getUserId())
+            .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        AnswerScript script = answerScriptRepository.findById(
+            request.getAnswerScript().getScriptId())
+            .orElseThrow(() -> new RuntimeException("Script not found"));
+
+        Float fee = reviewFeeStrategy.calculateFee();
 
         ReviewRequest newRequest = new ReviewRequestBuilder()
-            .withStudent(request.getStudent())
-            .withAnswerScript(request.getAnswerScript())
+            .withStudent(student)
+            .withAnswerScript(script)
             .withReviewFee(fee)
             .withReviewStatus("PAYMENT_PENDING")
             .build();
