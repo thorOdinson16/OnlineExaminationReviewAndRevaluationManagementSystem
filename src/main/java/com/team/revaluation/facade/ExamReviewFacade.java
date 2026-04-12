@@ -1,8 +1,6 @@
 package com.team.revaluation.facade;
 
 import com.team.revaluation.model.*;
-import com.team.revaluation.repository.AnswerScriptRepository;
-import com.team.revaluation.repository.UserRepository;
 import com.team.revaluation.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
