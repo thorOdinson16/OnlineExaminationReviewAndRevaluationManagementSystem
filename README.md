@@ -223,8 +223,3 @@ src/main/resources/
 | Utilities | Lombok |
 | Logging | Logback (rolling file, 30-day retention) |
 
----
-
-## 📄 License
-
-MIT — see [LICENSE](LICENSE) for details.
