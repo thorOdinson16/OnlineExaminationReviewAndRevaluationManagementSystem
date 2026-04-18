@@ -3,6 +3,10 @@ package com.team.revaluation.controller;
 import com.team.revaluation.factory.UserFactory;
 import com.team.revaluation.model.User;
 import com.team.revaluation.repository.UserRepository;
+import com.team.revaluation.model.Student;
+import com.team.revaluation.model.Evaluator;
+import com.team.revaluation.model.Revaluator;
+import com.team.revaluation.model.Admin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,9 +41,20 @@ public class AuthController {
         // Create user using factory method
         User user = userFactory.createUser(role, name, email, password);
         
+        if (user instanceof Student s) {
+            s.setUsn(request.get("usn"));
+            s.setSection(request.get("section"));
+        } else if (user instanceof Evaluator e) {
+            e.setDepartment(request.get("department"));
+        } else if (user instanceof Revaluator r) {
+            r.setSpecialization(request.get("specialization"));
+        } else if (user instanceof Admin a) {
+            a.setAdminCode(request.get("adminCode"));
+        }
+        
         // Save user to database
         User savedUser = userRepository.save(user);
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("userId", savedUser.getUserId());
         response.put("name", savedUser.getName());

@@ -306,12 +306,11 @@
             <h2><i class="fas fa-list"></i> Users</h2>
             
             <div class="tabs">
-                <button class="tab-btn active" onclick="loadUsers('ALL')">All Users</button>
-                <button class="tab-btn" onclick="loadUsers('STUDENT')">Students</button>
-                <button class="tab-btn" onclick="loadUsers('EVALUATOR')">Evaluators</button>
-                <button class="tab-btn" onclick="loadUsers('REVALUATOR')">Revaluators</button>
-                <button class="tab-btn" onclick="loadUsers('ADMIN')">Admins</button>
-                <button class="tab-btn" onclick="openAddUserModal()" style="background: #3498db; color: white; margin-left: auto;">+ Add User</button>
+                <button class="tab-btn active" onclick="loadUsers('ALL', this)">All Users</button>
+                <button class="tab-btn" onclick="loadUsers('STUDENT', this)">Students</button>
+                <button class="tab-btn" onclick="loadUsers('EVALUATOR', this)">Evaluators</button>
+                <button class="tab-btn" onclick="loadUsers('REVALUATOR', this)">Revaluators</button>
+                <button class="tab-btn" onclick="loadUsers('ADMIN', this)">Admins</button>
             </div>
             
             <div id="usersList"></div>
@@ -363,7 +362,7 @@
             }
         }
 
-        async function loadUsers(role) {
+        async function loadUsers(role, btn) {
             currentFilter = role;
             try {
                 let url = '/admin/users';
@@ -373,60 +372,57 @@
                 const response = await fetch(url);
                 const users = await response.json();
                 const container = document.getElementById('usersList');
-                
+
                 if (users.length === 0) {
                     container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No users found</p></div>';
-                    return;
+                } else {
+                    let html = '<table><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Details</th><th>Action</th></tr></thead><tbody>';
+                    users.forEach(user => {
+                        let roleClass = '';
+                        if (user.role === 'STUDENT') roleClass = 'role-student';
+                        else if (user.role === 'EVALUATOR') roleClass = 'role-evaluator';
+                        else if (user.role === 'REVALUATOR') roleClass = 'role-revaluator';
+                        else roleClass = 'role-admin';
+
+                        let details = '';
+                        if (user.role === 'STUDENT') {
+                            details = `USN: ${user.usn || 'N/A'} | Section: ${user.section || 'N/A'}`;
+                        } else if (user.role === 'EVALUATOR') {
+                            details = `Department: ${user.department || 'N/A'}`;
+                        } else if (user.role === 'REVALUATOR') {
+                            details = `Specialization: ${user.specialization || 'N/A'}`;
+                        } else {
+                            details = `Admin Code: ${user.adminCode || 'N/A'}`;
+                        }
+
+                        html += `
+                            <tr>
+                                <td>#${user.userId}</td>
+                                <td>${user.name}</td>
+                                <td>${user.email}</td>
+                                <td><span class="role-badge ${roleClass}">${user.role}</span></td>
+                                <td>${details}</td>
+                                <td><button class="delete" onclick="deleteUser(${user.userId})">Delete</button></td>
+                            </tr>
+                        `;
+                    });
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
                 }
-                
-                let html = '\\\\.<thead>运转<th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Details</th><th>Action</th></thead><tbody>';
-                
-                users.forEach(user => {
-                    let roleClass = '';
-                    if (user.role === 'STUDENT') roleClass = 'role-student';
-                    else if (user.role === 'EVALUATOR') roleClass = 'role-evaluator';
-                    else if (user.role === 'REVALUATOR') roleClass = 'role-revaluator';
-                    else roleClass = 'role-admin';
-                    
-                    let details = '';
-                    if (user.role === 'STUDENT') {
-                        details = `USN: ${user.usn || 'N/A'} | Section: ${user.section || 'N/A'}`;
-                    } else if (user.role === 'EVALUATOR') {
-                        details = `Department: ${user.department || 'N/A'}`;
-                    } else if (user.role === 'REVALUATOR') {
-                        details = `Specialization: ${user.specialization || 'N/A'}`;
-                    } else {
-                        details = `Admin Code: ${user.adminCode || 'N/A'}`;
-                    }
-                    
-                    html += ` 
-                        <tr>
-                            <td>#${user.userId}</td>
-                            <td>${user.name}</td>
-                            <td>${user.email}</td>
-                            <td><span class="role-badge ${roleClass}">${user.role}</span></td>
-                            <td>${details}</td>
-                            <td>
-                                <button class="delete" onclick="deleteUser(${user.userId})">Delete</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-                
-                html += '</tbody>树皮';
-                container.innerHTML = html;
-                
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                event.target.classList.add('active');
-                
+
+                // Safe active-tab logic — only run if a button was passed
+                if (btn) {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                }
+
             } catch (error) {
                 console.error('Error loading users:', error);
-                document.getElementById('usersList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading users</p></div>';
+                document.getElementById('usersList').innerHTML =
+                    '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading users</p></div>';
             }
         }
-        
+
         function filterByRole(role) {
             loadUsers(role);
         }

@@ -297,14 +297,35 @@
                 </div>
                 <div id="studentFields" class="student-fields" style="display: none;">
                     <div class="form-group">
-                        <label>USN (University Seat Number)</label>
-                        <input type="text" id="usn" placeholder="e.g., PES2UG22CS001">
+                        <label>USN (Unique Student Number)</label>
+                        <input type="text" id="usn" placeholder="e.g., PES1UG23CSXXX">
                         <i class="fas fa-id-card"></i>
                     </div>
                     <div class="form-group">
                         <label>Section</label>
                         <input type="text" id="section" placeholder="e.g., A, B, C">
                         <i class="fas fa-users"></i>
+                    </div>
+                </div>
+                <div id="evaluatorFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Department</label>
+                        <input type="text" id="department" placeholder="e.g., Computer Science">
+                        <i class="fas fa-building"></i>
+                    </div>
+                </div>
+                <div id="revaluatorFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Specialization</label>
+                        <input type="text" id="specialization" placeholder="e.g., Mathematics">
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
+                <div id="adminFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Admin Code</label>
+                        <input type="text" id="adminCode" placeholder="e.g., ADMIN001">
+                        <i class="fas fa-key"></i>
                     </div>
                 </div>
                 <button type="submit">
@@ -322,12 +343,10 @@
 
     <script>
         document.getElementById('role').addEventListener('change', function() {
-            const studentFields = document.getElementById('studentFields');
-            if (this.value === 'STUDENT') {
-                studentFields.style.display = 'block';
-            } else {
-                studentFields.style.display = 'none';
-            }
+            document.getElementById('studentFields').style.display    = this.value === 'STUDENT'    ? 'block' : 'none';
+            document.getElementById('evaluatorFields').style.display  = this.value === 'EVALUATOR'  ? 'block' : 'none';
+            document.getElementById('revaluatorFields').style.display = this.value === 'REVALUATOR' ? 'block' : 'none';
+            document.getElementById('adminFields').style.display      = this.value === 'ADMIN'      ? 'block' : 'none';
         });
 
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
@@ -338,10 +357,16 @@
             const role = document.getElementById('role').value;
             
             const requestBody = { name, email, password, role };
-            
+
             if (role === 'STUDENT') {
-                requestBody.usn = document.getElementById('usn').value;
+                requestBody.usn     = document.getElementById('usn').value;
                 requestBody.section = document.getElementById('section').value;
+            } else if (role === 'EVALUATOR') {
+                requestBody.department = document.getElementById('department').value;
+            } else if (role === 'REVALUATOR') {
+                requestBody.specialization = document.getElementById('specialization').value;
+            } else if (role === 'ADMIN') {
+                requestBody.adminCode = document.getElementById('adminCode').value;
             }
             
             const messageDiv = document.getElementById('message');
@@ -368,6 +393,7 @@
                 messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
             }
         });
+        document.getElementById('role').dispatchEvent(new Event('change'));
     </script>
 </body>
 </html>
