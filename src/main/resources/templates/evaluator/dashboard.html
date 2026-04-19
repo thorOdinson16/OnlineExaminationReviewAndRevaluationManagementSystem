@@ -132,6 +132,16 @@
             background: #f8fafc;
         }
 
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+
         button {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
@@ -150,10 +160,21 @@
             box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);
         }
 
+        button.success {
+            background: #059669;
+        }
+
         .empty-state {
             text-align: center;
             padding: 40px;
             color: #94a3b8;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 12px;
+            color: #cbd5e1;
+            display: block;
         }
 
         .modal {
@@ -202,8 +223,8 @@
     </div>
 
     <div class="nav">
-        <a onclick="showSection('pending')" class="active">Pending Evaluation</a>
-        <a onclick="showSection('evaluated')">Ready to Publish</a>
+        <a onclick="showSection('pending')" class="active" id="tab-pending">Pending Evaluation</a>
+        <a onclick="showSection('evaluated')" id="tab-evaluated">Ready to Publish</a>
         <a href="/login" onclick="logout()">Logout</a>
     </div>
 
@@ -223,22 +244,33 @@
 
         <div id="pending" class="section">
             <h2><i class="fas fa-tasks"></i> Pending Scripts (Under Evaluation)</h2>
-            <div id="pendingList"></div>
+            <div id="pendingList">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading scripts...</p>
+                </div>
+            </div>
         </div>
 
         <div id="evaluated" class="section" style="display: none;">
             <h2><i class="fas fa-upload"></i> Evaluated Scripts – Ready to Publish</h2>
-            <div id="evaluatedList"></div>
+            <div id="evaluatedList">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading scripts...</p>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="marksModal" class="modal">
         <div class="modal-content">
-            <h3>Submit Marks</h3>
+            <h3><i class="fas fa-pen"></i> Submit Marks</h3>
             <p>Script ID: <strong id="modalScriptId"></strong></p>
-            <input type="number" id="marks" step="0.01" placeholder="Enter marks">
-            <button onclick="submitMarks()">Submit</button>
-            <button onclick="closeModal()" style="background: #64748b;">Cancel</button>
+            <input type="number" id="marks" step="0.5" min="0" max="100" placeholder="Enter marks (0-100)">
+            <button onclick="submitMarks()">Submit Marks</button>
+            <button onclick="closeModal()" style="background: #64748b; margin-top: 8px;">Cancel</button>
+            <div id="modalMessage" style="margin-top: 12px; font-size: 13px;"></div>
         </div>
     </div>
 
@@ -247,11 +279,40 @@
         document.getElementById('evaluatorName').textContent = evaluatorName;
         let currentScriptId = null;
 
-        async function loadPending() {
+        // Helper to update stats
+        async function updateStats() {
             try {
-                const response = await fetch('/evaluator/scripts');
+                const pendingRes = await fetch('/evaluator/scripts/pending');
+                const pendingScripts = await pendingRes.json();
+                document.getElementById('pendingCount').textContent = Array.isArray(pendingScripts) ? pendingScripts.length : 0;
+
+                const evaluatedRes = await fetch('/evaluator/scripts/evaluated');
+                const evaluatedScripts = await evaluatedRes.json();
+                document.getElementById('evaluatedCount').textContent = Array.isArray(evaluatedScripts) ? evaluatedScripts.length : 0;
+            } catch (error) {
+                console.error('Error updating stats:', error);
+            }
+        }
+
+        async function loadPending() {
+            const container = document.getElementById('pendingList');
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading scripts...</p></div>';
+            
+            try {
+                const response = await fetch('/evaluator/scripts/pending');
+                
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
                 const scripts = await response.json();
-                const container = document.getElementById('pendingList');
+                
+                if (!Array.isArray(scripts)) {
+                    console.error('Expected array, got:', scripts);
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error: Invalid data format</p></div>';
+                    return;
+                }
+                
                 document.getElementById('pendingCount').textContent = scripts.length;
 
                 if (scripts.length === 0) {
@@ -259,14 +320,15 @@
                     return;
                 }
 
-                let html = '<thead><tr><th>Script ID</th><th>Student</th><th>Subject</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+                let html = '<table><thead><tr><th>Script ID</th><th>Student</th><th>Subject</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+                
                 scripts.forEach(script => {
                     html += `
                         <tr>
-                            <td>#${script.scriptId}</td>
+                            <td><strong>#${script.scriptId}</strong></td>
                             <td>${script.student?.name || 'N/A'}</td>
                             <td>${script.exam?.subject || 'N/A'}</td>
-                            <td><span class="status">Under Evaluation</span></td>
+                            <td><span class="status-badge">Under Evaluation</span></td>
                             <td>
                                 <button onclick="openModal(${script.scriptId})">
                                     <i class="fas fa-edit"></i> Submit Marks
@@ -275,19 +337,35 @@
                         </tr>
                     `;
                 });
-                html += '</tbody>';
+                
+                html += '</tbody></table>';
                 container.innerHTML = html;
+                
             } catch (error) {
                 console.error('Error loading pending scripts:', error);
-                document.getElementById('pendingList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading scripts</p></div>';
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading scripts. Please refresh.</p></div>';
             }
         }
 
         async function loadEvaluated() {
+            const container = document.getElementById('evaluatedList');
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading scripts...</p></div>';
+            
             try {
                 const response = await fetch('/evaluator/scripts/evaluated');
+                
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
                 const scripts = await response.json();
-                const container = document.getElementById('evaluatedList');
+                
+                if (!Array.isArray(scripts)) {
+                    console.error('Expected array, got:', scripts);
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error: Invalid data format</p></div>';
+                    return;
+                }
+                
                 document.getElementById('evaluatedCount').textContent = scripts.length;
 
                 if (scripts.length === 0) {
@@ -295,14 +373,15 @@
                     return;
                 }
 
-                let html = '<thead><tr><th>Script ID</th><th>Student</th><th>Subject</th><th>Marks</th><th>Action</th></tr></thead><tbody>';
+                let html = '<table><thead><tr><th>Script ID</th><th>Student</th><th>Subject</th><th>Marks</th><th>Action</th></tr></thead><tbody>';
+                
                 scripts.forEach(script => {
                     html += `
                         <tr>
-                            <td>#${script.scriptId}</td>
+                            <td><strong>#${script.scriptId}</strong></td>
                             <td>${script.student?.name || 'N/A'}</td>
                             <td>${script.exam?.subject || 'N/A'}</td>
-                            <td><strong>${script.totalMarks || 'Not Evaluated'}</strong></td>
+                            <td><strong>${script.totalMarks != null ? script.totalMarks : 'N/A'}</strong></td>
                             <td>
                                 <button class="success" onclick="verifyScript(${script.scriptId})">
                                     <i class="fas fa-check-double"></i> Publish Results
@@ -311,11 +390,13 @@
                         </tr>
                     `;
                 });
-                html += '</tbody>';
+                
+                html += '</tbody></table>';
                 container.innerHTML = html;
+                
             } catch (error) {
                 console.error('Error loading evaluated scripts:', error);
-                document.getElementById('evaluatedList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading scripts</p></div>';
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading scripts. Please refresh.</p></div>';
             }
         }
 
@@ -323,6 +404,7 @@
             currentScriptId = scriptId;
             document.getElementById('modalScriptId').textContent = scriptId;
             document.getElementById('marks').value = '';
+            document.getElementById('modalMessage').textContent = '';
             document.getElementById('marksModal').style.display = 'flex';
         }
 
@@ -333,25 +415,37 @@
 
         async function submitMarks() {
             const marks = document.getElementById('marks').value;
-            if (!marks || marks < 0) {
-                alert('Please enter valid marks');
+            const msgEl = document.getElementById('modalMessage');
+            
+            if (!marks || marks < 0 || marks > 100) {
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = 'Please enter valid marks (0-100)';
                 return;
             }
+            
             try {
                 const response = await fetch(`/evaluator/scripts/${currentScriptId}/submit?marks=${marks}`, {
                     method: 'PUT'
                 });
+                
+                const result = await response.json();
+                
                 if (response.ok) {
-                    alert('✅ Marks submitted successfully!');
-                    closeModal();
-                    loadPending();
-                    loadEvaluated();
+                    msgEl.style.color = '#059669';
+                    msgEl.textContent = '✅ Marks submitted successfully!';
+                    setTimeout(() => {
+                        closeModal();
+                        loadPending();
+                        loadEvaluated();
+                        updateStats();
+                    }, 1000);
                 } else {
-                    const error = await response.json();
-                    alert('❌ Error: ' + (error.message || 'Failed to submit marks'));
+                    msgEl.style.color = '#dc2626';
+                    msgEl.textContent = '❌ ' + (result.message || 'Failed to submit marks');
                 }
             } catch (error) {
-                alert('❌ Network error. Please try again.');
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = '❌ Network error. Please try again.';
             }
         }
 
@@ -361,13 +455,16 @@
                     const response = await fetch(`/evaluator/scripts/${scriptId}/verify`, {
                         method: 'PUT'
                     });
+                    
+                    const result = await response.json();
+                    
                     if (response.ok) {
                         alert('✅ Results published successfully!');
                         loadPending();
                         loadEvaluated();
+                        updateStats();
                     } else {
-                        const error = await response.json();
-                        alert('❌ Error: ' + (error.message || 'Failed to publish'));
+                        alert('❌ Error: ' + (result.message || 'Failed to publish'));
                     }
                 } catch (error) {
                     alert('❌ Network error. Please try again.');
@@ -384,10 +481,14 @@
             document.querySelectorAll('.nav a').forEach(link => {
                 link.classList.remove('active');
             });
-            event.target.classList.add('active');
-
-            if (sectionName === 'pending') loadPending();
-            if (sectionName === 'evaluated') loadEvaluated();
+            
+            if (sectionName === 'pending') {
+                document.getElementById('tab-pending').classList.add('active');
+                loadPending();
+            } else {
+                document.getElementById('tab-evaluated').classList.add('active');
+                loadEvaluated();
+            }
         }
 
         function logout() {
@@ -396,11 +497,15 @@
             localStorage.removeItem('userName');
         }
 
+        // Initial load
         loadPending();
-        loadEvaluated();
+        updateStats();
+        
+        // Auto-refresh every 30 seconds
         setInterval(() => {
             if (document.getElementById('pending').style.display !== 'none') loadPending();
             if (document.getElementById('evaluated').style.display !== 'none') loadEvaluated();
+            updateStats();
         }, 30000);
     </script>
 </body>

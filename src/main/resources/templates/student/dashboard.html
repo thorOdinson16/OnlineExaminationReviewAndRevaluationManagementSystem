@@ -380,6 +380,7 @@
         <a onclick="showSection('apply')">Apply for Review</a>
         <a onclick="showSection('status')">Review Status</a>
         <a onclick="showSection('revaluation')">Apply for Revaluation</a>
+        <a onclick="window.location.href='/student/revaluation-status'">Revaluation Status</a>
         <a href="/login" style="margin-left: auto;">Logout</a>
     </div>
 
@@ -583,12 +584,16 @@
                         action = `<button onclick="payForReview(${request.reviewId})">Pay Now</button>`;
                     } else if (request.reviewStatus === 'PAYMENT_SUCCESS') {
                         action = '<span style="color: #059669;">Paid - Awaiting Processing</span>';
-                    } else if (request.reviewStatus === 'IN_PROGRESS') {
+                    } else if (request.reviewStatus === 'UNDER_REVIEW' || request.reviewStatus === 'IN_PROGRESS') {
                         action = '<span style="color: #ea580c;">In Progress</span>';
+                    } else if (request.reviewStatus === 'REVIEW_COMPLETED' || request.reviewStatus === 'VERIFIED') {
+                        action = `<button onclick="window.location.href='/student/reviewed-paper?reviewId=${request.reviewId}'">
+                                    👁️ View Reviewed Paper
+                                </button>`;
                     } else if (request.reviewStatus === 'COMPLETED') {
                         action = '<span style="color: #059669;">Completed</span>';
                     }
-                    
+                                        
                     html += `<tr>
                         <td>#${request.reviewId}</td>
                         <td>#${request.answerScript?.scriptId || 'N/A'}</td>

@@ -43,6 +43,7 @@ public class AnswerScriptStateMachine {
         allow("REVIEW_PAYMENT_PENDING",      "REVIEW_IN_PROGRESS");
         allow("REVIEW_IN_PROGRESS",          "REVIEW_COMPLETED");
         allow("REVIEW_COMPLETED",            "AWAIT_STUDENT_DECISION");
+        allow("REVIEW_REQUESTED",            "UNDER_EVALUATION");
 
         // ── Student decision (§6 rows 9-10) ──────────────────────────────────
         allow("AWAIT_STUDENT_DECISION",      "FINALIZED");               // student accepts

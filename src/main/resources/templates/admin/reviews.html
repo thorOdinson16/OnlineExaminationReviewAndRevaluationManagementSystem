@@ -172,6 +172,16 @@
             color: #059669;
         }
 
+        .status-requested {
+            background: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .status-rejected {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
         button {
             background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             color: white;
@@ -196,6 +206,10 @@
 
         button.reject {
             background: #e74c3c;
+        }
+
+        button.assign {
+            background: #8b5cf6;
         }
 
         .empty-state {
@@ -239,6 +253,15 @@
             font-family: inherit;
         }
 
+        .modal-content select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: inherit;
+        }
+
         @media (max-width: 768px) {
             table {
                 font-size: 12px;
@@ -269,17 +292,23 @@
             <h2><i class="fas fa-clipboard-list"></i> Review Requests</h2>
             
             <div class="tabs">
-                <button class="tab-btn active" onclick="loadRequests('PENDING')">Pending (Payment Pending)</button>
-                <button class="tab-btn" onclick="loadRequests('PAYMENT_SUCCESS')">Payment Success</button>
-                <button class="tab-btn" onclick="loadRequests('IN_PROGRESS')">In Progress</button>
-                <button class="tab-btn" onclick="loadRequests('COMPLETED')">Completed</button>
-                <button class="tab-btn" onclick="loadRequests('REJECTED')">Rejected</button>
+                <button class="tab-btn active" onclick="loadRequests('PAYMENT_PENDING', event)">⏳ Pending Payment</button>
+                <button class="tab-btn" onclick="loadRequests('REVIEW_REQUESTED', event)">📋 Review Requested</button>
+                <button class="tab-btn" onclick="loadRequests('UNDER_REVIEW', event)">🔍 In Progress</button>
+                <button class="tab-btn" onclick="loadRequests('REVIEW_COMPLETED', event)">✅ Completed</button>
+                <button class="tab-btn" onclick="loadRequests('REJECTED', event)">❌ Rejected</button>
             </div>
             
-            <div id="requestsList"></div>
+            <div id="requestsList">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading requests...</p>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Reject Modal -->
     <div id="rejectModal" class="modal">
         <div class="modal-content">
             <h3>Reject Review Request</h3>
@@ -290,9 +319,24 @@
         </div>
     </div>
 
+    <!-- Assign Evaluator Modal -->
+    <div id="assignModal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-user-check"></i> Assign Evaluator</h3>
+            <p>Request ID: <strong id="assignRequestId"></strong></p>
+            <p>Script ID: <strong id="assignScriptId"></strong></p>
+            <select id="evaluatorSelect">
+                <option value="">-- Select Evaluator --</option>
+            </select>
+            <button onclick="confirmAssign()" style="margin-top: 16px;">Assign Evaluator</button>
+            <button onclick="closeAssignModal()" style="background: #64748b; margin-top: 8px;">Cancel</button>
+            <div id="assignMessage" style="margin-top: 12px; font-size: 13px;"></div>
+        </div>
+    </div>
+
     <script>
         let currentRequestId = null;
-        let currentAction = null;
+        let currentScriptId = null;
 
         function logout() {
             localStorage.removeItem('userId');
@@ -300,65 +344,72 @@
             localStorage.removeItem('userName');
         }
 
-        async function loadRequests(status) {
+        async function loadRequests(status, event) {
             try {
-                let url = '/admin/reviews';
-                if (status !== 'PENDING') {
-                    url = `/admin/reviews?status=${status}`;
-                } else {
+                let url;
+                if (status === 'PAYMENT_PENDING') {
                     url = '/admin/reviews/pending';
+                } else {
+                    url = `/admin/reviews?status=${status}`;
                 }
                 
                 const response = await fetch(url);
                 const requests = await response.json();
                 const container = document.getElementById('requestsList');
                 
-                if (requests.length === 0) {
+                if (!requests || requests.length === 0) {
                     container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No review requests found</p></div>';
+                    
+                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                    if (event && event.target) {
+                        event.target.classList.add('active');
+                    }
                     return;
                 }
                 
                 let html = '<table><thead><tr><th>Request ID</th><th>Student</th><th>Script ID</th><th>Subject</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead><tbody>';
                 
                 requests.forEach(req => {
-                    let statusClass = '';
-                    let statusText = req.reviewStatus || 'PENDING';
+                    const statusText = req.reviewStatus || 'PENDING';
+                    let statusClass = 'status-pending';
+                    let displayText = statusText;
                     
-                    if (statusText === 'PAYMENT_PENDING') {
-                        statusClass = 'status-pending';
-                        statusText = 'Payment Pending';
-                    } else if (statusText === 'PAYMENT_SUCCESS') {
-                        statusClass = 'status-success';
-                        statusText = 'Payment Success';
-                    } else if (statusText === 'IN_PROGRESS') {
-                        statusClass = 'status-progress';
-                        statusText = 'In Progress';
-                    } else if (statusText === 'COMPLETED') {
-                        statusClass = 'status-completed';
-                        statusText = 'Completed';
-                    } else {
-                        statusClass = 'status-pending';
+                    const statusMap = {
+                        'PAYMENT_PENDING': { class: 'status-pending', text: 'Payment Pending' },
+                        'REVIEW_REQUESTED': { class: 'status-requested', text: 'Review Requested' },
+                        'UNDER_REVIEW': { class: 'status-progress', text: 'In Progress' },
+                        'REVIEW_COMPLETED': { class: 'status-completed', text: 'Completed' },
+                        'VERIFIED': { class: 'status-completed', text: 'Verified' },
+                        'REJECTED': { class: 'status-rejected', text: 'Rejected' },
+                        'CANCELLED': { class: 'status-rejected', text: 'Cancelled' }
+                    };
+                    
+                    if (statusMap[statusText]) {
+                        statusClass = statusMap[statusText].class;
+                        displayText = statusMap[statusText].text;
                     }
                     
                     let action = '';
-                    if (req.reviewStatus === 'PAYMENT_PENDING') {
-                        action = `<button class="verify" onclick="verifyRequest(${req.reviewId})">Verify & Approve</button>
-                                  <button class="reject" onclick="openRejectModal(${req.reviewId})">Reject</button>`;
-                    } else if (req.reviewStatus === 'PAYMENT_SUCCESS') {
-                        action = `<button onclick="startReview(${req.reviewId})">Start Review</button>`;
-                    } else if (req.reviewStatus === 'IN_PROGRESS') {
-                        action = `<button onclick="completeReview(${req.reviewId})">Mark Complete</button>`;
+                    if (statusText === 'PAYMENT_PENDING') {
+                        action = `<button class="verify" onclick="verifyRequest(${req.reviewId})">✅ Verify & Approve</button>
+                                  <button class="reject" onclick="openRejectModal(${req.reviewId})">❌ Reject</button>`;
+                    } else if (statusText === 'REVIEW_REQUESTED') {
+                        action = `<button class="assign" onclick="openAssignModal(${req.reviewId}, ${req.answerScript?.scriptId || 0})">👤 Assign Evaluator</button>`;
+                    } else if (statusText === 'UNDER_REVIEW') {
+                        action = `<button onclick="completeReview(${req.reviewId})">✅ Mark Complete</button>`;
+                    } else if (statusText === 'REVIEW_COMPLETED') {
+                        action = `<button class="verify" onclick="verifyCompletedReview(${req.reviewId})">📋 Final Verify</button>`;
                     } else {
-                        action = '<span style="color: #64748b;">-</span>';
+                        action = '<span style="color: #64748b;">—</span>';
                     }
                     
                     html += `<tr>
-                        <td>#${req.reviewId}</td>
+                        <td><strong>#${req.reviewId}</strong></td>
                         <td>${req.student?.name || 'N/A'}</td>
                         <td>#${req.answerScript?.scriptId || 'N/A'}</td>
                         <td>${req.answerScript?.exam?.subject || 'N/A'}</td>
-                        <td>₹${req.reviewFee}</td>
-                        <td><span class="status ${statusClass}">${statusText}</span></td>
+                        <td>₹${req.reviewFee || '500'}</td>
+                        <td><span class="status ${statusClass}">${displayText}</span></td>
                         <td>${action}</td>
                     </tr>`;
                 });
@@ -366,18 +417,103 @@
                 html += '</tbody></table>';
                 container.innerHTML = html;
                 
-                // Update active tab styling
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                event.target.classList.add('active');
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                if (event && event.target) {
+                    event.target.classList.add('active');
+                }
                 
             } catch (error) {
                 console.error('Error loading requests:', error);
-                document.getElementById('requestsList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading requests</p></div>';
+                document.getElementById('requestsList').innerHTML = 
+                    '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading requests. Please try again.</p></div>';
             }
         }
-        
+
+        // ─── Assign Evaluator Functions ───────────────────────────────────────
+
+        async function openAssignModal(requestId, scriptId) {
+            currentRequestId = requestId;
+            currentScriptId = scriptId;
+            document.getElementById('assignRequestId').textContent = requestId;
+            document.getElementById('assignScriptId').textContent = scriptId;
+            document.getElementById('assignMessage').textContent = '';
+            
+            // Load evaluators
+            try {
+                const response = await fetch('/admin/users/evaluators');
+                const evaluators = await response.json();
+                const select = document.getElementById('evaluatorSelect');
+                
+                select.innerHTML = '<option value="">-- Select Evaluator --</option>';
+                evaluators.forEach(e => {
+                    select.innerHTML += `<option value="${e.userId}">${e.name} (${e.department || 'General'})</option>`;
+                });
+                
+                document.getElementById('assignModal').style.display = 'flex';
+            } catch (error) {
+                alert('Error loading evaluators. Please try again.');
+            }
+        }
+
+        function closeAssignModal() {
+            document.getElementById('assignModal').style.display = 'none';
+            currentRequestId = null;
+            currentScriptId = null;
+        }
+
+        async function confirmAssign() {
+            const evaluatorId = document.getElementById('evaluatorSelect').value;
+            const msgEl = document.getElementById('assignMessage');
+            
+            if (!evaluatorId) {
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = 'Please select an evaluator';
+                return;
+            }
+            
+            try {
+                // Step 1: Assign evaluator to script (transitions to UNDER_EVALUATION)
+                const assignResponse = await fetch(`/admin/evaluator/assign?scriptId=${currentScriptId}&evaluatorId=${evaluatorId}`, {
+                    method: 'POST'
+                });
+                
+                const assignResult = await assignResponse.json();
+                
+                if (!assignResponse.ok) {
+                    msgEl.style.color = '#dc2626';
+                    msgEl.textContent = '❌ ' + (assignResult.message || 'Failed to assign evaluator');
+                    return;
+                }
+                
+                // Step 2: Update review request status to UNDER_REVIEW
+                const statusResponse = await fetch(`/admin/reviews/${currentRequestId}/status?status=UNDER_REVIEW`, {
+                    method: 'PUT'
+                });
+                
+                const statusResult = await statusResponse.json();
+                
+                if (statusResponse.ok) {
+                    msgEl.style.color = '#059669';
+                    msgEl.textContent = '✅ Evaluator assigned successfully!';
+                    
+                    setTimeout(() => {
+                        closeAssignModal();
+                        const activeTab = document.querySelector('.tab-btn.active');
+                        loadRequests('REVIEW_REQUESTED', { target: activeTab });
+                    }, 1000);
+                } else {
+                    msgEl.style.color = '#dc2626';
+                    msgEl.textContent = '❌ ' + (statusResult.message || 'Failed to update status');
+                }
+                
+            } catch (error) {
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = '❌ Network error. Please try again.';
+            }
+        }
+
+        // ─── Existing Functions ───────────────────────────────────────────────
+
         async function verifyRequest(requestId) {
             if (confirm(`Verify and approve review request #${requestId}?`)) {
                 try {
@@ -388,29 +524,10 @@
                     
                     if (response.ok) {
                         alert('✅ Review request verified successfully!');
-                        loadRequests('PENDING');
+                        const activeTab = document.querySelector('.tab-btn.active');
+                        loadRequests('PAYMENT_PENDING', { target: activeTab });
                     } else {
                         alert('❌ Error: ' + (result.message || 'Failed to verify'));
-                    }
-                } catch (error) {
-                    alert('❌ Network error. Please try again.');
-                }
-            }
-        }
-        
-        async function startReview(requestId) {
-            if (confirm(`Start review for request #${requestId}?`)) {
-                try {
-                    const response = await fetch(`/admin/reviews/${requestId}/status?status=IN_PROGRESS`, {
-                        method: 'PUT'
-                    });
-                    const result = await response.json();
-                    
-                    if (response.ok) {
-                        alert('✅ Review started successfully!');
-                        loadRequests('PAYMENT_SUCCESS');
-                    } else {
-                        alert('❌ Error: ' + (result.message || 'Failed to start review'));
                     }
                 } catch (error) {
                     alert('❌ Network error. Please try again.');
@@ -421,16 +538,38 @@
         async function completeReview(requestId) {
             if (confirm(`Mark review as complete for request #${requestId}?`)) {
                 try {
-                    const response = await fetch(`/admin/reviews/${requestId}/status?status=COMPLETED`, {
+                    const response = await fetch(`/admin/reviews/${requestId}/status?status=REVIEW_COMPLETED`, {
                         method: 'PUT'
                     });
                     const result = await response.json();
                     
                     if (response.ok) {
                         alert('✅ Review marked as completed!');
-                        loadRequests('IN_PROGRESS');
+                        const activeTab = document.querySelector('.tab-btn.active');
+                        loadRequests('UNDER_REVIEW', { target: activeTab });
                     } else {
                         alert('❌ Error: ' + (result.message || 'Failed to complete review'));
+                    }
+                } catch (error) {
+                    alert('❌ Network error. Please try again.');
+                }
+            }
+        }
+        
+        async function verifyCompletedReview(requestId) {
+            if (confirm(`Final verify for review request #${requestId}? This will make results available to student.`)) {
+                try {
+                    const response = await fetch(`/admin/reviews/${requestId}/verify`, {
+                        method: 'PUT'
+                    });
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        alert('✅ Review finalized and published to student!');
+                        const activeTab = document.querySelector('.tab-btn.active');
+                        loadRequests('REVIEW_COMPLETED', { target: activeTab });
+                    } else {
+                        alert('❌ Error: ' + (result.message || 'Failed to verify'));
                     }
                 } catch (error) {
                     alert('❌ Network error. Please try again.');
@@ -466,7 +605,8 @@
                 if (response.ok) {
                     alert('✅ Review request rejected');
                     closeRejectModal();
-                    loadRequests('PENDING');
+                    const activeTab = document.querySelector('.tab-btn.active');
+                    loadRequests('PAYMENT_PENDING', { target: activeTab });
                 } else {
                     alert('❌ Error: ' + (result.message || 'Failed to reject'));
                 }
@@ -475,8 +615,11 @@
             }
         }
         
-        // Load pending requests by default
-        loadRequests('PENDING');
+        // Load payment pending by default
+        document.addEventListener('DOMContentLoaded', function() {
+            const defaultTab = document.querySelector('.tab-btn.active');
+            loadRequests('PAYMENT_PENDING', { target: defaultTab });
+        });
     </script>
 </body>
 </html>

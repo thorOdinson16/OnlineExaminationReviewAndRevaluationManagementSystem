@@ -41,7 +41,11 @@ public class AdminController {
     // ==================== REVIEW MANAGEMENT ====================
 
     @GetMapping("/reviews")
-    public ResponseEntity<List<ReviewRequest>> getAllReviews() {
+    public ResponseEntity<List<ReviewRequest>> getAllReviews(@RequestParam(required = false) String status) {
+        if (status != null && !status.isEmpty()) {
+            // Filter by status if provided
+            return ResponseEntity.ok(reviewService.getReviewsByStatus(status));
+        }
         return ResponseEntity.ok(reviewService.getAllReviews());
     }
 

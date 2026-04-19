@@ -100,7 +100,8 @@ public class RevaluationService implements IRevaluationService {
     /**
      * On success transitions:
      *   RevaluationRequest: PAYMENT_PENDING → REVALUATION_IN_PROGRESS
-     *   AnswerScript:       REVALUATION_PAYMENT_PENDING → REVALUATION_IN_PROGRESS (§6 row 12)
+     *   AnswerScript:       AWAIT_STUDENT_DECISION → REVALUATION_REQUESTED → REVALUATION_PAYMENT_PENDING → REVALUATION_IN_PROGRESS
+     *                       OR REVALUATION_PAYMENT_PENDING → REVALUATION_IN_PROGRESS
      */
     @Transactional
     @Override
@@ -124,16 +125,27 @@ public class RevaluationService implements IRevaluationService {
         if ("SUCCESS".equals(processedPayment.getPaymentStatus())) {
             RevaluationRequestStateMachine.transition(request, "REVALUATION_IN_PROGRESS");
 
-            // FIX: AnswerScript: REVALUATION_PAYMENT_PENDING → REVALUATION_IN_PROGRESS (§6 row 12)
+            // FIX: Handle both starting states
             AnswerScript script = request.getAnswerScript();
             if (script != null) {
                 try {
-                    // Only transition if in the expected payment-pending state
-                    if ("REVALUATION_PAYMENT_PENDING".equals(script.getStatus())) {
+                    String currentStatus = script.getStatus();
+                    
+                    if ("AWAIT_STUDENT_DECISION".equals(currentStatus)) {
+                        // Full path: AWAIT_STUDENT_DECISION → REVALUATION_REQUESTED → REVALUATION_PAYMENT_PENDING → REVALUATION_IN_PROGRESS
+                        AnswerScriptStateMachine.transition(script, "REVALUATION_REQUESTED");
+                        AnswerScriptStateMachine.transition(script, "REVALUATION_PAYMENT_PENDING");
+                        AnswerScriptStateMachine.transition(script, "REVALUATION_IN_PROGRESS");
+                    } else if ("REVALUATION_PAYMENT_PENDING".equals(currentStatus)) {
+                        // Already at payment pending, just move to in progress
+                        AnswerScriptStateMachine.transition(script, "REVALUATION_IN_PROGRESS");
+                    } else if ("RESULTS_PUBLISHED".equals(currentStatus) || "EVALUATED".equals(currentStatus)) {
+                        // Handle scripts that bypassed review workflow
+                        AnswerScriptStateMachine.transition(script, "REVALUATION_REQUESTED");
+                        AnswerScriptStateMachine.transition(script, "REVALUATION_PAYMENT_PENDING");
                         AnswerScriptStateMachine.transition(script, "REVALUATION_IN_PROGRESS");
                     } else {
-                        // Fallback: attempt the transition; state machine will guard it
-                        AnswerScriptStateMachine.transition(script, "REVALUATION_IN_PROGRESS");
+                        throw new RuntimeException("Script in invalid state for revaluation payment: " + currentStatus);
                     }
                     answerScriptRepository.save(script);
                 } catch (InvalidStateTransitionException e) {
