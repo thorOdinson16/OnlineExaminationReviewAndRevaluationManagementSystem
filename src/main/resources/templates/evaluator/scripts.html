@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Evaluator - Pending Scripts | Exam Review System</title>
+    <title>Evaluator - Answer Scripts | Exam Review System</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -21,7 +21,6 @@
             text-align: center;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-
         .header h1 { font-size: 26px; color: #1a237e; }
         .header h1 i { color: #1976d2; margin-right: 10px; }
 
@@ -34,7 +33,6 @@
             padding: 10px 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-
         .nav a {
             color: #475569;
             padding: 10px 22px;
@@ -43,7 +41,6 @@
             border-radius: 40px;
             transition: all 0.3s ease;
         }
-
         .nav a:hover, .nav a.active {
             background: linear-gradient(135deg, #1a237e 0%, #1976d2 100%);
             color: white;
@@ -58,7 +55,6 @@
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-
         .section h2 {
             color: #1a237e;
             margin-bottom: 20px;
@@ -70,7 +66,6 @@
         }
 
         table { width: 100%; border-collapse: collapse; }
-
         th {
             background: #f8fafc;
             padding: 12px;
@@ -79,7 +74,6 @@
             color: #1a237e;
             border-bottom: 2px solid #e2e8f0;
         }
-
         td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
         tr:hover { background: #f8fafc; }
 
@@ -90,7 +84,6 @@
             font-weight: 600;
             display: inline-block;
         }
-
         .status-under-eval { background: #dbeafe; color: #1976d2; }
         .status-evaluated  { background: #d1fae5; color: #059669; }
         .status-published  { background: #f3e8ff; color: #7c3aed; }
@@ -106,57 +99,14 @@
             font-weight: 500;
             transition: all 0.3s ease;
             margin: 0 3px;
-        }
-
-        button:hover { transform: translateY(-1px); }
-        button.verify-btn { background: #059669; }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 32px;
-            border-radius: 20px;
-            width: 420px;
-            max-width: 90%;
-        }
-
-        .modal-content h3 { margin-bottom: 16px; color: #1a237e; }
-
-        .form-group { margin-bottom: 18px; }
-        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: #334155; }
-        .form-group input {
-            width: 100%;
-            padding: 10px 14px;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 14px;
             font-family: 'Poppins', sans-serif;
         }
+        button:hover { transform: translateY(-1px); }
+        button.verify-btn { background: linear-gradient(135deg, #059669, #10b981); }
+        button.cancel-btn { background: #64748b; }
 
-        .form-group input:focus {
-            outline: none;
-            border-color: #1976d2;
-        }
-
-        .empty-state { text-align: center; padding: 40px; color: #94a3b8; }
-        .empty-state i { font-size: 48px; margin-bottom: 12px; color: #cbd5e1; display: block; }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
+        /* Tabs */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn {
             background: #f1f5f9;
             color: #475569;
@@ -167,11 +117,220 @@
             font-size: 13px;
             font-weight: 500;
             transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
         }
-
         .tab-btn.active, .tab-btn:hover {
             background: linear-gradient(135deg, #1a237e 0%, #1976d2 100%);
             color: white;
+        }
+
+        .empty-state { text-align: center; padding: 40px; color: #94a3b8; }
+        .empty-state i { font-size: 48px; margin-bottom: 12px; color: #cbd5e1; display: block; }
+
+        /* ── Grading Overlay ──────────────────────────────────────────────── */
+        .grading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            z-index: 2000;
+            align-items: stretch;
+        }
+        .grading-overlay.open { display: flex; }
+
+        /* Left panel: PDF viewer */
+        .pdf-panel {
+            flex: 1 1 60%;
+            background: #1e293b;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .pdf-panel-header {
+            background: #0f172a;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .pdf-panel-header i { color: #60a5fa; }
+        .pdf-iframe-wrap {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        .pdf-iframe-wrap iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .pdf-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            gap: 16px;
+        }
+        .pdf-placeholder i { font-size: 72px; color: #334155; }
+        .pdf-placeholder p { font-size: 15px; }
+        .pdf-placeholder small { font-size: 12px; color: #475569; }
+
+        /* Right panel: grading */
+        .grade-panel {
+            width: 420px;
+            flex-shrink: 0;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: -4px 0 24px rgba(0,0,0,0.2);
+        }
+        .grade-panel-header {
+            background: linear-gradient(135deg, #1a237e 0%, #1976d2 100%);
+            padding: 18px 22px;
+            color: white;
+        }
+        .grade-panel-header h3 { font-size: 18px; font-weight: 600; }
+        .grade-panel-header p { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+
+        .grade-panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        /* Total score strip */
+        .total-strip {
+            background: #f0f9ff;
+            border: 2px solid #1976d2;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .total-strip span { font-size: 13px; color: #475569; font-weight: 500; }
+        .total-strip .total-val {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a237e;
+        }
+        .total-strip .total-val small { font-size: 14px; color: #64748b; font-weight: 400; }
+
+        /* Question rows */
+        .q-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .q-row:last-child { border-bottom: none; }
+
+        .q-label {
+            width: 80px;
+            flex-shrink: 0;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a237e;
+        }
+
+        .q-slider-wrap { flex: 1; display: flex; align-items: center; gap: 8px; }
+
+        .q-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: #e2e8f0;
+            outline: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .q-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #1976d2;
+            cursor: pointer;
+            box-shadow: 0 1px 4px rgba(25,118,210,0.4);
+        }
+        .q-slider::-moz-range-thumb {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #1976d2;
+            cursor: pointer;
+            border: none;
+        }
+
+        .q-number-wrap { position: relative; }
+        .q-input {
+            width: 56px;
+            padding: 6px 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            color: #1a237e;
+            font-family: 'Poppins', sans-serif;
+            transition: border-color 0.2s;
+        }
+        .q-input:focus { outline: none; border-color: #1976d2; }
+        .q-input.over { border-color: #dc2626; color: #dc2626; }
+
+        .q-max { font-size: 11px; color: #94a3b8; flex-shrink: 0; }
+
+        /* Grade panel footer */
+        .grade-panel-footer {
+            padding: 16px 20px;
+            border-top: 2px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .grade-panel-footer .submit-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 10px;
+        }
+        .grade-msg { font-size: 12px; text-align: center; min-height: 16px; }
+
+        /* Verify modal (unchanged look) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+        .modal-content {
+            background: white;
+            padding: 32px;
+            border-radius: 20px;
+            width: 420px;
+            max-width: 90%;
+        }
+        .modal-content h3 { margin-bottom: 16px; color: #1a237e; }
+
+        @media (max-width: 768px) {
+            .grading-overlay.open { flex-direction: column; }
+            .pdf-panel { flex: 0 0 40vh; }
+            .grade-panel { width: 100%; flex: 1; }
         }
     </style>
 </head>
@@ -188,7 +347,6 @@
     </div>
 
     <div class="container">
-        <!-- Tabs -->
         <div class="tabs">
             <button class="tab-btn active" onclick="loadScripts('pending', this)">
                 <i class="fas fa-clock"></i> Pending (Under Evaluation)
@@ -198,7 +356,6 @@
             </button>
         </div>
 
-        <!-- Scripts Table -->
         <div class="section">
             <h2 id="sectionTitle"><i class="fas fa-list"></i> Scripts Under Evaluation</h2>
             <div id="scriptsList">
@@ -210,18 +367,50 @@
         </div>
     </div>
 
-    <!-- Submit Marks Modal -->
-    <div id="submitModal" class="modal">
-        <div class="modal-content">
-            <h3><i class="fas fa-pen"></i> Submit Marks</h3>
-            <p style="color:#64748b; margin-bottom:16px;">Script ID: <strong id="modalScriptId"></strong></p>
-            <div class="form-group">
-                <label>Marks Obtained</label>
-                <input type="number" id="marksInput" min="0" max="100" step="0.5" placeholder="Enter marks (e.g. 78.5)">
+    <!-- ── Grading Overlay ──────────────────────────────────────────────────── -->
+    <div id="gradingOverlay" class="grading-overlay">
+
+        <!-- Left: PDF viewer -->
+        <div class="pdf-panel">
+            <div class="pdf-panel-header">
+                <i class="fas fa-file-pdf"></i>
+                <span id="pdfPanelTitle">Answer Script — #<span id="pdfScriptId"></span></span>
             </div>
-            <button onclick="confirmSubmitMarks()">Submit Marks</button>
-            <button onclick="closeModal('submitModal')" style="background:#64748b; margin-top:8px;">Cancel</button>
-            <div id="submitMessage" style="margin-top:12px; font-size:13px;"></div>
+            <div class="pdf-iframe-wrap" id="pdfIframeWrap">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- Right: grading panel -->
+        <div class="grade-panel">
+            <div class="grade-panel-header">
+                <h3><i class="fas fa-pen-nib"></i> Grade Paper</h3>
+                <p>Script&nbsp;#<span id="gradeScriptId"></span> &mdash; each question out of&nbsp;10</p>
+            </div>
+
+            <div class="grade-panel-body">
+                <!-- Total strip -->
+                <div class="total-strip">
+                    <span><i class="fas fa-sigma"></i> Total Score</span>
+                    <div>
+                        <span class="total-val" id="totalDisplay">0</span>
+                        <span class="total-val"><small> / 100</small></span>
+                    </div>
+                </div>
+
+                <!-- 10 question rows injected here -->
+                <div id="questionRows"></div>
+            </div>
+
+            <div class="grade-panel-footer">
+                <div class="grade-msg" id="gradeMsg"></div>
+                <button class="submit-btn" onclick="confirmSubmitMarks()">
+                    <i class="fas fa-paper-plane"></i> Submit Marks
+                </button>
+                <button class="cancel-btn" onclick="closeGrading()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
         </div>
     </div>
 
@@ -241,6 +430,8 @@
 
     <script>
         let currentScriptId = null;
+        const Q_COUNT = 10;
+        const Q_MAX   = 10;
 
         function logout() {
             localStorage.removeItem('userId');
@@ -248,14 +439,14 @@
             localStorage.removeItem('userName');
         }
 
+        // ── Table loading ───────────────────────────────────────────────────────
+
         async function loadScripts(type, btn) {
-            // Update active tab
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
 
             const sectionTitle = document.getElementById('sectionTitle');
             const container    = document.getElementById('scriptsList');
-
             container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>';
 
             let url;
@@ -274,42 +465,31 @@
 
                 if (!scripts || scripts.length === 0) {
                     container.innerHTML = `<div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <p>No scripts found in this category.</p>
-                    </div>`;
+                        <i class="fas fa-inbox"></i><p>No scripts found in this category.</p></div>`;
                     return;
                 }
 
                 let html = `<table>
-                    <thead>
-                        <tr>
-                            <th>Script ID</th>
-                            <th>Student</th>
-                            <th>USN</th>
-                            <th>Subject</th>
-                            <th>Marks</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
+                    <thead><tr>
+                        <th>Script ID</th><th>Student</th><th>USN</th>
+                        <th>Subject</th><th>Marks</th><th>Status</th><th>Actions</th>
+                    </tr></thead><tbody>`;
 
                 scripts.forEach(script => {
                     const statusClass = script.status === 'UNDER_EVALUATION' ? 'status-under-eval'
                                       : script.status === 'EVALUATED'        ? 'status-evaluated'
                                       : 'status-published';
-
                     let actions = '';
                     if (script.status === 'UNDER_EVALUATION') {
-                        actions = `<button onclick="openSubmitModal(${script.scriptId})">
-                                       <i class="fas fa-pen"></i> Submit Marks
+                        actions = `<button onclick="openGrading(${script.scriptId}, '${script.pdfUrl || ''}')">
+                                       <i class="fas fa-pen"></i> Grade Paper
                                    </button>`;
                     } else if (script.status === 'EVALUATED') {
                         actions = `<button class="verify-btn" onclick="openVerifyModal(${script.scriptId})">
                                        <i class="fas fa-upload"></i> Publish Results
                                    </button>`;
                     } else {
-                        actions = `<span style="color:#94a3b8; font-size:12px;">No actions</span>`;
+                        actions = `<span style="color:#94a3b8;font-size:12px;">No actions</span>`;
                     }
 
                     html += `<tr>
@@ -329,42 +509,140 @@
             } catch (error) {
                 container.innerHTML = `<div class="empty-state">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <p>Error loading scripts: ${error.message}</p>
-                </div>`;
+                    <p>Error loading scripts: ${error.message}</p></div>`;
             }
         }
 
-        // ── Submit Marks ────────────────────────────────────────────────────────
+        // ── Grading Overlay ─────────────────────────────────────────────────────
 
-        function openSubmitModal(scriptId) {
+        function buildQuestionRows() {
+            const container = document.getElementById('questionRows');
+            container.innerHTML = '';
+            for (let i = 1; i <= Q_COUNT; i++) {
+                const row = document.createElement('div');
+                row.className = 'q-row';
+                row.innerHTML = `
+                    <div class="q-label">Q&nbsp;${i}</div>
+                    <div class="q-slider-wrap">
+                        <input type="range" class="q-slider" id="slider-${i}"
+                               min="0" max="${Q_MAX}" step="0.5" value="0"
+                               oninput="syncFromSlider(${i})">
+                    </div>
+                    <div class="q-number-wrap">
+                        <input type="number" class="q-input" id="input-${i}"
+                               min="0" max="${Q_MAX}" step="0.5" value="0"
+                               oninput="syncFromInput(${i})">
+                    </div>
+                    <div class="q-max">/ ${Q_MAX}</div>
+                `;
+                container.appendChild(row);
+            }
+        }
+
+        function syncFromSlider(i) {
+            const val = parseFloat(document.getElementById(`slider-${i}`).value);
+            document.getElementById(`input-${i}`).value = val;
+            updateTotal();
+        }
+
+        function syncFromInput(i) {
+            let val = parseFloat(document.getElementById(`input-${i}`).value);
+            const inputEl = document.getElementById(`input-${i}`);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > Q_MAX) {
+                inputEl.classList.add('over');
+            } else {
+                inputEl.classList.remove('over');
+                document.getElementById(`slider-${i}`).value = val;
+            }
+            updateTotal();
+        }
+
+        function updateTotal() {
+            let sum = 0;
+            let hasOver = false;
+            for (let i = 1; i <= Q_COUNT; i++) {
+                const raw = parseFloat(document.getElementById(`input-${i}`).value) || 0;
+                if (raw > Q_MAX) hasOver = true;
+                sum += Math.min(raw, Q_MAX);
+            }
+            const totalEl = document.getElementById('totalDisplay');
+            totalEl.textContent = sum;
+            totalEl.style.color = hasOver ? '#dc2626' : (sum === 100 ? '#059669' : '#1a237e');
+        }
+
+        function openGrading(scriptId, pdfUrl) {
             currentScriptId = scriptId;
-            document.getElementById('modalScriptId').textContent = scriptId;
-            document.getElementById('marksInput').value = '';
-            document.getElementById('submitMessage').textContent = '';
-            document.getElementById('submitModal').style.display = 'flex';
+            document.getElementById('pdfScriptId').textContent   = scriptId;
+            document.getElementById('gradeScriptId').textContent = scriptId;
+            document.getElementById('gradeMsg').textContent = '';
+            document.getElementById('gradeMsg').style.color = '';
+
+            // Reset all inputs
+            buildQuestionRows();
+            updateTotal();
+
+            // PDF viewer
+            const wrap = document.getElementById('pdfIframeWrap');
+            if (pdfUrl) {
+                wrap.innerHTML = `<iframe src="${pdfUrl}"></iframe>`;
+            } else {
+                wrap.innerHTML = `
+                    <div class="pdf-placeholder">
+                        <i class="fas fa-file-pdf"></i>
+                        <p>Answer Script PDF</p>
+                        <small>PDF URL not available for Script #${scriptId}</small>
+                        <small style="margin-top:8px; color:#334155;">
+                            Add a <code>pdfUrl</code> field to <code>AnswerScript</code> to enable in-browser viewing.
+                        </small>
+                    </div>`;
+            }
+
+            document.getElementById('gradingOverlay').classList.add('open');
+        }
+
+        function closeGrading() {
+            document.getElementById('gradingOverlay').classList.remove('open');
+            currentScriptId = null;
         }
 
         async function confirmSubmitMarks() {
-            const marks = parseFloat(document.getElementById('marksInput').value);
-            const msgEl = document.getElementById('submitMessage');
+            const msgEl = document.getElementById('gradeMsg');
 
-            if (isNaN(marks) || marks < 0) {
-                msgEl.style.color = '#dc2626';
-                msgEl.textContent = 'Please enter valid marks (≥ 0).';
-                return;
+            // Validate no question exceeds max
+            for (let i = 1; i <= Q_COUNT; i++) {
+                const val = parseFloat(document.getElementById(`input-${i}`).value) || 0;
+                if (val > Q_MAX) {
+                    msgEl.style.color = '#dc2626';
+                    msgEl.textContent = `Q${i} exceeds max ${Q_MAX} marks. Please correct it.`;
+                    return;
+                }
             }
+
+            // Compute total
+            let total = 0;
+            for (let i = 1; i <= Q_COUNT; i++) {
+                total += parseFloat(document.getElementById(`input-${i}`).value) || 0;
+            }
+            total = Math.round(total * 2) / 2; // round to 0.5
+
+            msgEl.style.color = '#1976d2';
+            msgEl.textContent = 'Submitting…';
 
             try {
                 const response = await fetch(
-                    `/evaluator/scripts/${currentScriptId}/submit?marks=${marks}`,
+                    `/evaluator/scripts/${currentScriptId}/submit?marks=${total}`,
                     { method: 'PUT' }
                 );
                 const result = await response.json();
 
                 if (response.ok) {
                     msgEl.style.color = '#059669';
-                    msgEl.textContent = `✅ Marks submitted! Status: ${result.status}`;
-                    setTimeout(() => { closeModal('submitModal'); loadScripts('pending', null); }, 1500);
+                    msgEl.textContent = `✅ Marks submitted (${total}/100)! Status: ${result.status}`;
+                    setTimeout(() => {
+                        closeGrading();
+                        loadScripts('pending', document.querySelector('.tab-btn.active'));
+                    }, 1600);
                 } else {
                     msgEl.style.color = '#dc2626';
                     msgEl.textContent = '❌ ' + (result.message || 'Failed to submit marks.');
@@ -375,7 +653,7 @@
             }
         }
 
-        // ── Verify / Publish ────────────────────────────────────────────────────
+        // ── Verify modal ────────────────────────────────────────────────────────
 
         function openVerifyModal(scriptId) {
             currentScriptId = scriptId;
@@ -392,7 +670,6 @@
                     { method: 'PUT' }
                 );
                 const result = await response.json();
-
                 if (response.ok) {
                     msgEl.style.color = '#059669';
                     msgEl.textContent = `✅ Results published! Status: ${result.status}`;

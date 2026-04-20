@@ -404,23 +404,7 @@
         
         async function payForRevaluation(revaluationId) {
             if (confirm('Proceed with payment for revaluation request #' + revaluationId + '?')) {
-                try {
-                    const response = await fetch(`/student/revaluation/${revaluationId}/pay`, {
-                        method: 'POST'
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (response.ok) {
-                        alert('✅ Payment successful! Your revaluation request is now in progress.');
-                        loadRevaluations(); // Refresh the list
-                    } else {
-                        alert('❌ Payment failed: ' + (result.message || 'Please try again.'));
-                    }
-                } catch (error) {
-                    console.error('Payment error:', error);
-                    alert('❌ Payment processing error. Please try again.');
-                }
+                window.location.href = `/student/payment?revaluationId=${revaluationId}`;
             }
         }
         

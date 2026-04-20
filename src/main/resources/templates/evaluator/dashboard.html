@@ -7,11 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Poppins', sans-serif;
@@ -25,16 +21,8 @@
             text-align: center;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-
-        .header h1 {
-            font-size: 28px;
-            color: #11998e;
-        }
-
-        .header h1 i {
-            color: #38ef7d;
-            margin-right: 10px;
-        }
+        .header h1 { font-size: 28px; color: #11998e; }
+        .header h1 i { color: #38ef7d; margin-right: 10px; }
 
         .nav {
             background: white;
@@ -45,7 +33,6 @@
             padding: 10px 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-
         .nav a {
             color: #475569;
             padding: 12px 24px;
@@ -55,17 +42,12 @@
             transition: all 0.3s ease;
             cursor: pointer;
         }
-
         .nav a:hover, .nav a.active {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
 
         .stats-grid {
             display: grid;
@@ -73,7 +55,6 @@
             gap: 20px;
             margin-bottom: 30px;
         }
-
         .stat-card {
             background: white;
             padding: 20px;
@@ -81,18 +62,8 @@
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-
-        .stat-card i {
-            font-size: 40px;
-            color: #11998e;
-            margin-bottom: 10px;
-        }
-
-        .stat-card h3 {
-            font-size: 32px;
-            color: #11998e;
-            margin-bottom: 5px;
-        }
+        .stat-card i { font-size: 40px; color: #11998e; margin-bottom: 10px; }
+        .stat-card h3 { font-size: 32px; color: #11998e; margin-bottom: 5px; }
 
         .section {
             background: white;
@@ -101,7 +72,6 @@
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-
         .section h2 {
             color: #11998e;
             margin-bottom: 20px;
@@ -109,11 +79,7 @@
             border-bottom: 3px solid #e2e8f0;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
+        table { width: 100%; border-collapse: collapse; }
         th {
             background: #f8fafc;
             padding: 12px;
@@ -122,15 +88,8 @@
             color: #11998e;
             border-bottom: 2px solid #e2e8f0;
         }
-
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        tr:hover {
-            background: #f8fafc;
-        }
+        td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        tr:hover { background: #f8fafc; }
 
         .status-badge {
             padding: 4px 12px;
@@ -153,66 +112,145 @@
             font-weight: 500;
             transition: all 0.3s ease;
             margin: 0 4px;
+            font-family: 'Poppins', sans-serif;
         }
+        button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(17,153,142,0.3); }
+        button.success { background: linear-gradient(135deg, #059669, #10b981); }
+        button.secondary { background: #64748b; }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);
-        }
+        .empty-state { text-align: center; padding: 40px; color: #94a3b8; }
+        .empty-state i { font-size: 48px; margin-bottom: 12px; color: #cbd5e1; display: block; }
 
-        button.success {
-            background: #059669;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #94a3b8;
-        }
-
-        .empty-state i {
-            font-size: 48px;
-            margin-bottom: 12px;
-            color: #cbd5e1;
-            display: block;
-        }
-
-        .modal {
+        /* ── Grading Overlay ────────────────────────────────────────────────── */
+        .grading-overlay {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
+            inset: 0;
+            background: rgba(15,23,42,0.75);
+            z-index: 2000;
+            align-items: stretch;
+        }
+        .grading-overlay.open { display: flex; }
+
+        .pdf-panel {
+            flex: 1 1 60%;
+            background: #1e293b;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .pdf-panel-header {
+            background: #0f172a;
+            padding: 14px 20px;
+            display: flex;
             align-items: center;
-            z-index: 1000;
+            gap: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
         }
+        .pdf-panel-header i { color: #34d399; }
+        .pdf-iframe-wrap { flex: 1; overflow: hidden; }
+        .pdf-iframe-wrap iframe { width: 100%; height: 100%; border: none; }
+        .pdf-placeholder {
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: #94a3b8; gap: 16px;
+        }
+        .pdf-placeholder i { font-size: 72px; color: #334155; }
+        .pdf-placeholder p { font-size: 15px; }
+        .pdf-placeholder small { font-size: 12px; color: #475569; }
 
-        .modal-content {
+        .grade-panel {
+            width: 420px;
+            flex-shrink: 0;
             background: white;
-            padding: 30px;
-            border-radius: 20px;
-            width: 400px;
-            max-width: 90%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: -4px 0 24px rgba(0,0,0,0.25);
         }
+        .grade-panel-header {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            padding: 18px 22px;
+            color: white;
+        }
+        .grade-panel-header h3 { font-size: 18px; font-weight: 600; }
+        .grade-panel-header p  { font-size: 12px; opacity: 0.9; margin-top: 4px; }
 
-        .modal-content input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
+        .grade-panel-body { flex: 1; overflow-y: auto; padding: 20px; }
+
+        .total-strip {
+            background: #f0fdf9;
+            border: 2px solid #11998e;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
+        .total-strip span { font-size: 13px; color: #475569; font-weight: 500; }
+        .total-val { font-size: 28px; font-weight: 700; color: #11998e; }
+        .total-val small { font-size: 14px; color: #64748b; font-weight: 400; }
+
+        .q-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .q-row:last-child { border-bottom: none; }
+        .q-label { width: 80px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: #11998e; }
+        .q-slider-wrap { flex: 1; display: flex; align-items: center; }
+        .q-slider {
+            flex: 1;
+            -webkit-appearance: none; appearance: none;
+            height: 6px; border-radius: 3px;
+            background: #e2e8f0; outline: none; cursor: pointer;
+        }
+        .q-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #11998e; cursor: pointer;
+            box-shadow: 0 1px 4px rgba(17,153,142,0.4);
+        }
+        .q-slider::-moz-range-thumb {
+            width: 18px; height: 18px;
+            border-radius: 50%; background: #11998e;
+            cursor: pointer; border: none;
+        }
+        .q-input {
+            width: 56px; padding: 6px 8px;
+            border: 2px solid #e2e8f0; border-radius: 8px;
+            font-size: 14px; font-weight: 600;
+            text-align: center; color: #11998e;
+            font-family: 'Poppins', sans-serif;
+        }
+        .q-input:focus { outline: none; border-color: #11998e; }
+        .q-input.over  { border-color: #dc2626; color: #dc2626; }
+        .q-max { font-size: 11px; color: #94a3b8; flex-shrink: 0; }
+
+        .grade-panel-footer {
+            padding: 16px 20px;
+            border-top: 2px solid #e2e8f0;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .grade-panel-footer .submit-btn {
+            width: 100%; padding: 12px;
+            font-size: 15px; font-weight: 600; border-radius: 10px;
+        }
+        .grade-msg { font-size: 12px; text-align: center; min-height: 16px; }
 
         @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            table {
-                font-size: 12px;
-            }
+            .stats-grid { grid-template-columns: 1fr; }
+            table { font-size: 12px; }
+            .grading-overlay.open { flex-direction: column; }
+            .pdf-panel { flex: 0 0 40vh; }
+            .grade-panel { width: 100%; flex: 1; }
         }
     </style>
 </head>
@@ -245,32 +283,55 @@
         <div id="pending" class="section">
             <h2><i class="fas fa-tasks"></i> Pending Scripts (Under Evaluation)</h2>
             <div id="pendingList">
-                <div class="empty-state">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <p>Loading scripts...</p>
-                </div>
+                <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading scripts...</p></div>
             </div>
         </div>
 
-        <div id="evaluated" class="section" style="display: none;">
+        <div id="evaluated" class="section" style="display:none;">
             <h2><i class="fas fa-upload"></i> Evaluated Scripts – Ready to Publish</h2>
             <div id="evaluatedList">
-                <div class="empty-state">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <p>Loading scripts...</p>
-                </div>
+                <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading scripts...</p></div>
             </div>
         </div>
     </div>
 
-    <div id="marksModal" class="modal">
-        <div class="modal-content">
-            <h3><i class="fas fa-pen"></i> Submit Marks</h3>
-            <p>Script ID: <strong id="modalScriptId"></strong></p>
-            <input type="number" id="marks" step="0.5" min="0" max="100" placeholder="Enter marks (0-100)">
-            <button onclick="submitMarks()">Submit Marks</button>
-            <button onclick="closeModal()" style="background: #64748b; margin-top: 8px;">Cancel</button>
-            <div id="modalMessage" style="margin-top: 12px; font-size: 13px;"></div>
+    <!-- ── Grading Overlay ──────────────────────────────────────────────────── -->
+    <div id="gradingOverlay" class="grading-overlay">
+
+        <div class="pdf-panel">
+            <div class="pdf-panel-header">
+                <i class="fas fa-file-pdf"></i>
+                <span>Answer Script — #<span id="pdfScriptId"></span></span>
+            </div>
+            <div class="pdf-iframe-wrap" id="pdfIframeWrap"></div>
+        </div>
+
+        <div class="grade-panel">
+            <div class="grade-panel-header">
+                <h3><i class="fas fa-pen-nib"></i> Grade Paper</h3>
+                <p>Script&nbsp;#<span id="gradeScriptId"></span> — each question out of&nbsp;10</p>
+            </div>
+
+            <div class="grade-panel-body">
+                <div class="total-strip">
+                    <span><i class="fas fa-sigma"></i> Total Score</span>
+                    <div>
+                        <span class="total-val" id="totalDisplay">0</span>
+                        <span class="total-val"><small> / 100</small></span>
+                    </div>
+                </div>
+                <div id="questionRows"></div>
+            </div>
+
+            <div class="grade-panel-footer">
+                <div class="grade-msg" id="gradeMsg"></div>
+                <button class="submit-btn" onclick="confirmSubmitMarks()">
+                    <i class="fas fa-paper-plane"></i> Submit Marks
+                </button>
+                <button class="secondary" onclick="closeGrading()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
         </div>
     </div>
 
@@ -278,41 +339,29 @@
         const evaluatorName = localStorage.getItem('userName') || 'Evaluator';
         document.getElementById('evaluatorName').textContent = evaluatorName;
         let currentScriptId = null;
+        const Q_COUNT = 10, Q_MAX = 10;
 
-        // Helper to update stats
+        // ── Stats ────────────────────────────────────────────────────────────────
         async function updateStats() {
             try {
-                const pendingRes = await fetch('/evaluator/scripts/pending');
-                const pendingScripts = await pendingRes.json();
-                document.getElementById('pendingCount').textContent = Array.isArray(pendingScripts) ? pendingScripts.length : 0;
-
-                const evaluatedRes = await fetch('/evaluator/scripts/evaluated');
-                const evaluatedScripts = await evaluatedRes.json();
-                document.getElementById('evaluatedCount').textContent = Array.isArray(evaluatedScripts) ? evaluatedScripts.length : 0;
-            } catch (error) {
-                console.error('Error updating stats:', error);
-            }
+                const [p, e] = await Promise.all([
+                    fetch('/evaluator/scripts/pending').then(r => r.json()),
+                    fetch('/evaluator/scripts/evaluated').then(r => r.json())
+                ]);
+                document.getElementById('pendingCount').textContent   = Array.isArray(p) ? p.length : 0;
+                document.getElementById('evaluatedCount').textContent = Array.isArray(e) ? e.length : 0;
+            } catch {}
         }
 
+        // ── Load pending ─────────────────────────────────────────────────────────
         async function loadPending() {
             const container = document.getElementById('pendingList');
             container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading scripts...</p></div>';
-            
             try {
                 const response = await fetch('/evaluator/scripts/pending');
-                
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
-                }
-                
+                if (!response.ok) throw new Error(`Server error: ${response.status}`);
                 const scripts = await response.json();
-                
-                if (!Array.isArray(scripts)) {
-                    console.error('Expected array, got:', scripts);
-                    container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error: Invalid data format</p></div>';
-                    return;
-                }
-                
+                if (!Array.isArray(scripts)) throw new Error('Invalid data');
                 document.getElementById('pendingCount').textContent = scripts.length;
 
                 if (scripts.length === 0) {
@@ -321,51 +370,35 @@
                 }
 
                 let html = '<table><thead><tr><th>Script ID</th><th>Student</th><th>Subject</th><th>Status</th><th>Action</th></tr></thead><tbody>';
-                
                 scripts.forEach(script => {
-                    html += `
-                        <tr>
-                            <td><strong>#${script.scriptId}</strong></td>
-                            <td>${script.student?.name || 'N/A'}</td>
-                            <td>${script.exam?.subject || 'N/A'}</td>
-                            <td><span class="status-badge">Under Evaluation</span></td>
-                            <td>
-                                <button onclick="openModal(${script.scriptId})">
-                                    <i class="fas fa-edit"></i> Submit Marks
-                                </button>
-                            </td>
-                        </tr>
-                    `;
+                    html += `<tr>
+                        <td><strong>#${script.scriptId}</strong></td>
+                        <td>${script.student?.name || 'N/A'}</td>
+                        <td>${script.exam?.subject || 'N/A'}</td>
+                        <td><span class="status-badge">Under Evaluation</span></td>
+                        <td>
+                            <button onclick="openGrading(${script.scriptId}, '${script.pdfUrl || ''}')">
+                                <i class="fas fa-pen"></i> Grade Paper
+                            </button>
+                        </td>
+                    </tr>`;
                 });
-                
                 html += '</tbody></table>';
                 container.innerHTML = html;
-                
             } catch (error) {
-                console.error('Error loading pending scripts:', error);
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading scripts. Please refresh.</p></div>';
             }
         }
 
+        // ── Load evaluated ───────────────────────────────────────────────────────
         async function loadEvaluated() {
             const container = document.getElementById('evaluatedList');
             container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading scripts...</p></div>';
-            
             try {
                 const response = await fetch('/evaluator/scripts/evaluated');
-                
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
-                }
-                
+                if (!response.ok) throw new Error(`Server error: ${response.status}`);
                 const scripts = await response.json();
-                
-                if (!Array.isArray(scripts)) {
-                    console.error('Expected array, got:', scripts);
-                    container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error: Invalid data format</p></div>';
-                    return;
-                }
-                
+                if (!Array.isArray(scripts)) throw new Error('Invalid data');
                 document.getElementById('evaluatedCount').textContent = scripts.length;
 
                 if (scripts.length === 0) {
@@ -374,114 +407,160 @@
                 }
 
                 let html = '<table><thead><tr><th>Script ID</th><th>Student</th><th>Subject</th><th>Marks</th><th>Action</th></tr></thead><tbody>';
-                
                 scripts.forEach(script => {
-                    html += `
-                        <tr>
-                            <td><strong>#${script.scriptId}</strong></td>
-                            <td>${script.student?.name || 'N/A'}</td>
-                            <td>${script.exam?.subject || 'N/A'}</td>
-                            <td><strong>${script.totalMarks != null ? script.totalMarks : 'N/A'}</strong></td>
-                            <td>
-                                <button class="success" onclick="verifyScript(${script.scriptId})">
-                                    <i class="fas fa-check-double"></i> Publish Results
-                                </button>
-                            </td>
-                        </tr>
-                    `;
+                    html += `<tr>
+                        <td><strong>#${script.scriptId}</strong></td>
+                        <td>${script.student?.name || 'N/A'}</td>
+                        <td>${script.exam?.subject || 'N/A'}</td>
+                        <td><strong>${script.totalMarks != null ? script.totalMarks : 'N/A'}</strong></td>
+                        <td>
+                            <button class="success" onclick="verifyScript(${script.scriptId})">
+                                <i class="fas fa-check-double"></i> Publish Results
+                            </button>
+                        </td>
+                    </tr>`;
                 });
-                
                 html += '</tbody></table>';
                 container.innerHTML = html;
-                
             } catch (error) {
-                console.error('Error loading evaluated scripts:', error);
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading scripts. Please refresh.</p></div>';
             }
         }
 
-        function openModal(scriptId) {
-            currentScriptId = scriptId;
-            document.getElementById('modalScriptId').textContent = scriptId;
-            document.getElementById('marks').value = '';
-            document.getElementById('modalMessage').textContent = '';
-            document.getElementById('marksModal').style.display = 'flex';
+        // ── Grading Overlay ──────────────────────────────────────────────────────
+        function buildQuestionRows() {
+            const container = document.getElementById('questionRows');
+            container.innerHTML = '';
+            for (let i = 1; i <= Q_COUNT; i++) {
+                const row = document.createElement('div');
+                row.className = 'q-row';
+                row.innerHTML = `
+                    <div class="q-label">Q&nbsp;${i}</div>
+                    <div class="q-slider-wrap">
+                        <input type="range" class="q-slider" id="slider-${i}"
+                               min="0" max="${Q_MAX}" step="0.5" value="0"
+                               oninput="syncFromSlider(${i})">
+                    </div>
+                    <input type="number" class="q-input" id="input-${i}"
+                           min="0" max="${Q_MAX}" step="0.5" value="0"
+                           oninput="syncFromInput(${i})">
+                    <div class="q-max">/ ${Q_MAX}</div>
+                `;
+                container.appendChild(row);
+            }
         }
 
-        function closeModal() {
-            document.getElementById('marksModal').style.display = 'none';
+        function syncFromSlider(i) {
+            const val = parseFloat(document.getElementById(`slider-${i}`).value);
+            document.getElementById(`input-${i}`).value = val;
+            updateTotal();
+        }
+        function syncFromInput(i) {
+            let val = parseFloat(document.getElementById(`input-${i}`).value);
+            const el = document.getElementById(`input-${i}`);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > Q_MAX) { el.classList.add('over'); }
+            else { el.classList.remove('over'); document.getElementById(`slider-${i}`).value = val; }
+            updateTotal();
+        }
+        function updateTotal() {
+            let sum = 0, hasOver = false;
+            for (let i = 1; i <= Q_COUNT; i++) {
+                const raw = parseFloat(document.getElementById(`input-${i}`).value) || 0;
+                if (raw > Q_MAX) hasOver = true;
+                sum += Math.min(raw, Q_MAX);
+            }
+            const el = document.getElementById('totalDisplay');
+            el.textContent = sum;
+            el.style.color = hasOver ? '#dc2626' : (sum === 100 ? '#059669' : '#11998e');
+        }
+
+        function openGrading(scriptId, pdfUrl) {
+            currentScriptId = scriptId;
+            document.getElementById('pdfScriptId').textContent   = scriptId;
+            document.getElementById('gradeScriptId').textContent = scriptId;
+            document.getElementById('gradeMsg').textContent = '';
+
+            buildQuestionRows();
+            updateTotal();
+
+            const wrap = document.getElementById('pdfIframeWrap');
+            wrap.innerHTML = pdfUrl
+                ? `<iframe src="${pdfUrl}"></iframe>`
+                : `<div class="pdf-placeholder">
+                       <i class="fas fa-file-pdf"></i>
+                       <p>Answer Script PDF</p>
+                       <small>Script #${scriptId} — PDF not attached</small>
+                       <small style="margin-top:8px;color:#334155;">Add a <code>pdfUrl</code> field to <code>AnswerScript</code> to enable in-browser viewing.</small>
+                   </div>`;
+
+            document.getElementById('gradingOverlay').classList.add('open');
+        }
+
+        function closeGrading() {
+            document.getElementById('gradingOverlay').classList.remove('open');
             currentScriptId = null;
         }
 
-        async function submitMarks() {
-            const marks = document.getElementById('marks').value;
-            const msgEl = document.getElementById('modalMessage');
-            
-            if (!marks || marks < 0 || marks > 100) {
-                msgEl.style.color = '#dc2626';
-                msgEl.textContent = 'Please enter valid marks (0-100)';
-                return;
+        async function confirmSubmitMarks() {
+            const msgEl = document.getElementById('gradeMsg');
+            for (let i = 1; i <= Q_COUNT; i++) {
+                if ((parseFloat(document.getElementById(`input-${i}`).value) || 0) > Q_MAX) {
+                    msgEl.style.color = '#dc2626';
+                    msgEl.textContent = `Q${i} exceeds max ${Q_MAX}. Please correct it.`;
+                    return;
+                }
             }
-            
+            let total = 0;
+            for (let i = 1; i <= Q_COUNT; i++) total += parseFloat(document.getElementById(`input-${i}`).value) || 0;
+            total = Math.round(total * 2) / 2;
+
+            msgEl.style.color = '#11998e';
+            msgEl.textContent = 'Submitting…';
+
             try {
-                const response = await fetch(`/evaluator/scripts/${currentScriptId}/submit?marks=${marks}`, {
-                    method: 'PUT'
-                });
-                
+                const response = await fetch(`/evaluator/scripts/${currentScriptId}/submit?marks=${total}`, { method: 'PUT' });
                 const result = await response.json();
-                
                 if (response.ok) {
                     msgEl.style.color = '#059669';
-                    msgEl.textContent = '✅ Marks submitted successfully!';
+                    msgEl.textContent = `✅ Marks submitted (${total}/100)!`;
                     setTimeout(() => {
-                        closeModal();
+                        closeGrading();
                         loadPending();
                         loadEvaluated();
                         updateStats();
-                    }, 1000);
+                    }, 1500);
                 } else {
                     msgEl.style.color = '#dc2626';
-                    msgEl.textContent = '❌ ' + (result.message || 'Failed to submit marks');
+                    msgEl.textContent = '❌ ' + (result.message || 'Failed to submit marks.');
                 }
-            } catch (error) {
+            } catch {
                 msgEl.style.color = '#dc2626';
                 msgEl.textContent = '❌ Network error. Please try again.';
             }
         }
 
+        // ── Verify / Publish ─────────────────────────────────────────────────────
         async function verifyScript(scriptId) {
-            if (confirm(`Publish results for Script #${scriptId}? This will make the results visible to students.`)) {
+            if (confirm(`Publish results for Script #${scriptId}? This will make results visible to students.`)) {
                 try {
-                    const response = await fetch(`/evaluator/scripts/${scriptId}/verify`, {
-                        method: 'PUT'
-                    });
-                    
+                    const response = await fetch(`/evaluator/scripts/${scriptId}/verify`, { method: 'PUT' });
                     const result = await response.json();
-                    
                     if (response.ok) {
                         alert('✅ Results published successfully!');
-                        loadPending();
-                        loadEvaluated();
-                        updateStats();
+                        loadPending(); loadEvaluated(); updateStats();
                     } else {
                         alert('❌ Error: ' + (result.message || 'Failed to publish'));
                     }
-                } catch (error) {
-                    alert('❌ Network error. Please try again.');
-                }
+                } catch { alert('❌ Network error. Please try again.'); }
             }
         }
 
+        // ── Section toggle ───────────────────────────────────────────────────────
         function showSection(sectionName) {
-            document.querySelectorAll('.section').forEach(section => {
-                section.style.display = 'none';
-            });
+            document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
             document.getElementById(sectionName).style.display = 'block';
-
-            document.querySelectorAll('.nav a').forEach(link => {
-                link.classList.remove('active');
-            });
-            
+            document.querySelectorAll('.nav a').forEach(l => l.classList.remove('active'));
             if (sectionName === 'pending') {
                 document.getElementById('tab-pending').classList.add('active');
                 loadPending();
@@ -500,10 +579,8 @@
         // Initial load
         loadPending();
         updateStats();
-        
-        // Auto-refresh every 30 seconds
         setInterval(() => {
-            if (document.getElementById('pending').style.display !== 'none') loadPending();
+            if (document.getElementById('pending').style.display   !== 'none') loadPending();
             if (document.getElementById('evaluated').style.display !== 'none') loadEvaluated();
             updateStats();
         }, 30000);

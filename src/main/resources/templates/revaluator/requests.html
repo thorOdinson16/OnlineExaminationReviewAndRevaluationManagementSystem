@@ -3,78 +3,519 @@
 <html>
 <head>
     <title>Revaluator — Pending Requests</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; background: #f4f6f8; padding: 24px; }
-        h2 { margin-bottom: 16px; }
-        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
-        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e5e7eb; }
-        th { background: #f9fafb; font-weight: 600; }
-        .btn { padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
-        .btn-submit { background: #4f46e5; color: #fff; }
-        input[type=number] { width: 80px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; }
-        .empty { text-align: center; padding: 40px; color: #6b7280; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: white;
+            padding: 22px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header h1 { font-size: 26px; color: #4f46e5; }
+        .header h1 i { color: #7c3aed; margin-right: 10px; }
+
+        .nav {
+            background: white;
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            padding: 10px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            flex-wrap: wrap;
+        }
+        .nav a {
+            color: #475569;
+            padding: 10px 22px;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 40px;
+            transition: all 0.3s ease;
+        }
+        .nav a:hover, .nav a.active {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+        }
+
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 28px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #4f46e5;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            background: #f8fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #4f46e5;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        tr:hover { background: #f8fafc; }
+
+        .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .status-pending   { background: #fef3c7; color: #d97706; }
+        .status-progress  { background: #dbeafe; color: #2563eb; }
+        .status-completed { background: #d1fae5; color: #059669; }
+        .status-other     { background: #f1f5f9; color: #64748b; }
+
+        button {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 7px 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 0 3px;
+            font-family: 'Poppins', sans-serif;
+        }
+        button:hover { transform: translateY(-1px); }
+        button.cancel-btn { background: #64748b; }
+
+        .empty-state { text-align: center; padding: 40px; color: #94a3b8; }
+        .empty-state i { font-size: 48px; margin-bottom: 12px; color: #cbd5e1; display: block; }
+
+        /* ── Grading Overlay ──────────────────────────────────────────────── */
+        .grading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            z-index: 2000;
+            align-items: stretch;
+        }
+        .grading-overlay.open { display: flex; }
+
+        .pdf-panel {
+            flex: 1 1 60%;
+            background: #1e293b;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .pdf-panel-header {
+            background: #0f172a;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .pdf-panel-header i { color: #818cf8; }
+        .pdf-iframe-wrap { flex: 1; overflow: hidden; position: relative; }
+        .pdf-iframe-wrap iframe { width: 100%; height: 100%; border: none; }
+        .pdf-placeholder {
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: #94a3b8; gap: 16px;
+        }
+        .pdf-placeholder i { font-size: 72px; color: #334155; }
+        .pdf-placeholder p  { font-size: 15px; }
+        .pdf-placeholder small { font-size: 12px; color: #475569; }
+
+        .grade-panel {
+            width: 440px;
+            flex-shrink: 0;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: -4px 0 24px rgba(0,0,0,0.2);
+        }
+        .grade-panel-header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            padding: 18px 22px;
+            color: white;
+        }
+        .grade-panel-header h3 { font-size: 18px; font-weight: 600; }
+        .grade-panel-header p  { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+
+        .grade-panel-body { flex: 1; overflow-y: auto; padding: 20px; }
+
+        .total-strip {
+            background: #f5f3ff;
+            border: 2px solid #4f46e5;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .total-strip span { font-size: 13px; color: #475569; font-weight: 500; }
+        .total-strip .total-val { font-size: 28px; font-weight: 700; color: #4f46e5; }
+        .total-strip .total-val small { font-size: 14px; color: #64748b; font-weight: 400; }
+
+        /* Comments field */
+        .comments-wrap { margin-top: 16px; }
+        .comments-wrap label { display: block; font-size: 13px; font-weight: 600; color: #4f46e5; margin-bottom: 6px; }
+        .comments-wrap textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 13px;
+            font-family: 'Poppins', sans-serif;
+            resize: vertical;
+            min-height: 70px;
+            transition: border-color 0.2s;
+        }
+        .comments-wrap textarea:focus { outline: none; border-color: #4f46e5; }
+
+        .q-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .q-row:last-child { border-bottom: none; }
+        .q-label { width: 80px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: #4f46e5; }
+
+        .q-slider-wrap { flex: 1; display: flex; align-items: center; gap: 8px; }
+        .q-slider {
+            flex: 1;
+            -webkit-appearance: none; appearance: none;
+            height: 6px; border-radius: 3px;
+            background: #e2e8f0; outline: none; cursor: pointer;
+        }
+        .q-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #4f46e5; cursor: pointer;
+            box-shadow: 0 1px 4px rgba(79,70,229,0.4);
+        }
+        .q-slider::-moz-range-thumb {
+            width: 18px; height: 18px;
+            border-radius: 50%; background: #4f46e5;
+            cursor: pointer; border: none;
+        }
+
+        .q-input {
+            width: 56px; padding: 6px 8px;
+            border: 2px solid #e2e8f0; border-radius: 8px;
+            font-size: 14px; font-weight: 600;
+            text-align: center; color: #4f46e5;
+            font-family: 'Poppins', sans-serif;
+            transition: border-color 0.2s;
+        }
+        .q-input:focus { outline: none; border-color: #4f46e5; }
+        .q-input.over  { border-color: #dc2626; color: #dc2626; }
+        .q-max { font-size: 11px; color: #94a3b8; flex-shrink: 0; }
+
+        .grade-panel-footer {
+            padding: 16px 20px;
+            border-top: 2px solid #e2e8f0;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .grade-panel-footer .submit-btn {
+            width: 100%; padding: 12px;
+            font-size: 15px; font-weight: 600; border-radius: 10px;
+        }
+        .grade-msg { font-size: 12px; text-align: center; min-height: 16px; }
+
+        @media (max-width: 768px) {
+            .grading-overlay.open { flex-direction: column; }
+            .pdf-panel { flex: 0 0 40vh; }
+            .grade-panel { width: 100%; flex: 1; }
+        }
     </style>
 </head>
 <body>
-    <h2><i class="fas fa-clipboard-list"></i> Pending Revaluation Requests</h2>
-    <table id="requestTable">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Student</th>
-                <th>Script ID</th>
-                <th>Status</th>
-                <th>New Marks</th>
-                <th>Comments</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="requestBody">
-            <tr><td colspan="7" class="empty">Loading...</td></tr>
-        </tbody>
-    </table>
+    <div class="header">
+        <h1><i class="fas fa-clipboard-check"></i> Revaluator — Requests</h1>
+        <p>Review and grade revaluation requests</p>
+    </div>
+
+    <div class="nav">
+        <a href="/revaluator/dashboard">Dashboard</a>
+        <a href="/view/revaluator/requests" class="active">Pending Requests</a>
+        <a href="/login">Logout</a>
+    </div>
+
+    <div class="container">
+        <div class="section">
+            <h2><i class="fas fa-clipboard-list"></i> Pending Revaluation Requests</h2>
+            <div id="requestsList">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading requests…</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Grading Overlay ──────────────────────────────────────────────────── -->
+    <div id="gradingOverlay" class="grading-overlay">
+
+        <div class="pdf-panel">
+            <div class="pdf-panel-header">
+                <i class="fas fa-file-pdf"></i>
+                <span>Answer Script — Request&nbsp;#<span id="pdfRequestId"></span></span>
+            </div>
+            <div class="pdf-iframe-wrap" id="pdfIframeWrap"></div>
+        </div>
+
+        <div class="grade-panel">
+            <div class="grade-panel-header">
+                <h3><i class="fas fa-pen-nib"></i> Re-Grade Paper</h3>
+                <p>Request&nbsp;#<span id="gradeRequestId"></span> &mdash; each question out of&nbsp;10</p>
+            </div>
+
+            <div class="grade-panel-body">
+                <div class="total-strip">
+                    <span><i class="fas fa-sigma"></i> Total Score</span>
+                    <div>
+                        <span class="total-val" id="totalDisplay">0</span>
+                        <span class="total-val"><small> / 100</small></span>
+                    </div>
+                </div>
+
+                <div id="questionRows"></div>
+
+                <div class="comments-wrap">
+                    <label><i class="fas fa-comment-alt"></i> Comments (optional)</label>
+                    <textarea id="commentsInput" placeholder="Add remarks about the revaluation…"></textarea>
+                </div>
+            </div>
+
+            <div class="grade-panel-footer">
+                <div class="grade-msg" id="gradeMsg"></div>
+                <button class="submit-btn" onclick="confirmSubmitMarks()">
+                    <i class="fas fa-paper-plane"></i> Submit Marks
+                </button>
+                <button class="cancel-btn" onclick="closeGrading()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
+        let currentRequestId = null;
+        const Q_COUNT = 10;
+        const Q_MAX   = 10;
+
+        // ── Table loading ───────────────────────────────────────────────────────
+
         async function loadRequests() {
-            const res = await fetch('/revaluator/requests');
-            const data = await res.json();
-            const tbody = document.getElementById('requestBody');
-            if (!data.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="empty">No pending requests</td></tr>';
-                return;
+            const container = document.getElementById('requestsList');
+            try {
+                const res  = await fetch('/revaluator/requests');
+                const data = await res.json();
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = `<div class="empty-state">
+                        <i class="fas fa-inbox"></i><p>No pending revaluation requests.</p></div>`;
+                    return;
+                }
+
+                let html = `<table>
+                    <thead><tr>
+                        <th>ID</th><th>Student</th><th>Script ID</th>
+                        <th>Original Marks</th><th>Status</th><th>Action</th>
+                    </tr></thead><tbody>`;
+
+                data.forEach(r => {
+                    const st = r.revaluationStatus || '';
+                    const statusClass = st.includes('PROGRESS') ? 'status-progress'
+                                      : st.includes('PENDING')  ? 'status-pending'
+                                      : st.includes('COMPLETED')? 'status-completed'
+                                      : 'status-other';
+
+                    html += `<tr>
+                        <td><strong>#${r.revaluationId}</strong></td>
+                        <td>${r.student?.name || 'N/A'}</td>
+                        <td>#${r.answerScript?.scriptId || 'N/A'}</td>
+                        <td>${r.answerScript?.totalMarks != null ? r.answerScript.totalMarks : '—'}</td>
+                        <td><span class="status ${statusClass}">${st}</span></td>
+                        <td>
+                            <button onclick="openGrading(${r.revaluationId}, '${r.answerScript?.pdfUrl || ''}', ${r.answerScript?.scriptId || 'null'})">
+                                <i class="fas fa-pen"></i> Grade
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+
+            } catch (err) {
+                container.innerHTML = `<div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error loading requests: ${err.message}</p></div>`;
             }
-            tbody.innerHTML = data.map(r => `
-                <tr>
-                    <td>#${r.revaluationId}</td>
-                    <td>${r.student?.name || 'N/A'}</td>
-                    <td>#${r.answerScript?.scriptId || 'N/A'}</td>
-                    <td>${r.revaluationStatus}</td>
-                    <td><input type="number" id="marks-${r.revaluationId}" step="0.5" min="0" placeholder="marks"></td>
-                    <td><input type="text" id="comments-${r.revaluationId}" placeholder="optional"></td>
-                    <td>
-                        <button class="btn btn-submit" onclick="submitMarks(${r.revaluationId})">
-                            <i class="fas fa-paper-plane"></i> Submit
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
         }
 
-        async function submitMarks(id) {
-            const marks = document.getElementById(`marks-${id}`).value;
-            const comments = document.getElementById(`comments-${id}`).value;
-            if (!marks) { alert('Enter marks before submitting.'); return; }
+        // ── Grading Overlay ─────────────────────────────────────────────────────
 
-            const res = await fetch(`/revaluator/requests/${id}/submit?marks=${marks}&comments=${encodeURIComponent(comments)}`, {
-                method: 'PUT'
-            });
-            const result = await res.json();
-            if (res.ok) {
-                alert(`✅ ${result.message}`);
-                loadRequests();
+        function buildQuestionRows() {
+            const container = document.getElementById('questionRows');
+            container.innerHTML = '';
+            for (let i = 1; i <= Q_COUNT; i++) {
+                const row = document.createElement('div');
+                row.className = 'q-row';
+                row.innerHTML = `
+                    <div class="q-label">Q&nbsp;${i}</div>
+                    <div class="q-slider-wrap">
+                        <input type="range" class="q-slider" id="slider-${i}"
+                               min="0" max="${Q_MAX}" step="0.5" value="0"
+                               oninput="syncFromSlider(${i})">
+                    </div>
+                    <div>
+                        <input type="number" class="q-input" id="input-${i}"
+                               min="0" max="${Q_MAX}" step="0.5" value="0"
+                               oninput="syncFromInput(${i})">
+                    </div>
+                    <div class="q-max">/ ${Q_MAX}</div>
+                `;
+                container.appendChild(row);
+            }
+        }
+
+        function syncFromSlider(i) {
+            const val = parseFloat(document.getElementById(`slider-${i}`).value);
+            document.getElementById(`input-${i}`).value = val;
+            updateTotal();
+        }
+
+        function syncFromInput(i) {
+            let val = parseFloat(document.getElementById(`input-${i}`).value);
+            const inputEl = document.getElementById(`input-${i}`);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > Q_MAX) {
+                inputEl.classList.add('over');
             } else {
-                alert(`❌ ${result.message || 'Failed'}`);
+                inputEl.classList.remove('over');
+                document.getElementById(`slider-${i}`).value = val;
+            }
+            updateTotal();
+        }
+
+        function updateTotal() {
+            let sum = 0;
+            let hasOver = false;
+            for (let i = 1; i <= Q_COUNT; i++) {
+                const raw = parseFloat(document.getElementById(`input-${i}`).value) || 0;
+                if (raw > Q_MAX) hasOver = true;
+                sum += Math.min(raw, Q_MAX);
+            }
+            const totalEl = document.getElementById('totalDisplay');
+            totalEl.textContent = sum;
+            totalEl.style.color = hasOver ? '#dc2626' : (sum === 100 ? '#059669' : '#4f46e5');
+        }
+
+        function openGrading(requestId, pdfUrl, scriptId) {
+            currentRequestId = requestId;
+            document.getElementById('pdfRequestId').textContent   = requestId;
+            document.getElementById('gradeRequestId').textContent = requestId;
+            document.getElementById('gradeMsg').textContent = '';
+            document.getElementById('commentsInput').value  = '';
+
+            buildQuestionRows();
+            updateTotal();
+
+            const wrap = document.getElementById('pdfIframeWrap');
+            if (pdfUrl) {
+                wrap.innerHTML = `<iframe src="${pdfUrl}"></iframe>`;
+            } else {
+                wrap.innerHTML = `
+                    <div class="pdf-placeholder">
+                        <i class="fas fa-file-pdf"></i>
+                        <p>Answer Script PDF</p>
+                        <small>Script #${scriptId || '—'} — PDF not attached</small>
+                        <small style="margin-top:8px; color:#334155;">
+                            Add a <code>pdfUrl</code> field to <code>AnswerScript</code> to enable in-browser viewing.
+                        </small>
+                    </div>`;
+            }
+
+            document.getElementById('gradingOverlay').classList.add('open');
+        }
+
+        function closeGrading() {
+            document.getElementById('gradingOverlay').classList.remove('open');
+            currentRequestId = null;
+        }
+
+        async function confirmSubmitMarks() {
+            const msgEl = document.getElementById('gradeMsg');
+
+            for (let i = 1; i <= Q_COUNT; i++) {
+                const val = parseFloat(document.getElementById(`input-${i}`).value) || 0;
+                if (val > Q_MAX) {
+                    msgEl.style.color = '#dc2626';
+                    msgEl.textContent = `Q${i} exceeds max ${Q_MAX} marks. Please correct it.`;
+                    return;
+                }
+            }
+
+            let total = 0;
+            for (let i = 1; i <= Q_COUNT; i++) {
+                total += parseFloat(document.getElementById(`input-${i}`).value) || 0;
+            }
+            total = Math.round(total * 2) / 2;
+
+            const comments = document.getElementById('commentsInput').value.trim();
+
+            msgEl.style.color = '#4f46e5';
+            msgEl.textContent = 'Submitting…';
+
+            try {
+                const url = `/revaluator/requests/${currentRequestId}/submit?marks=${total}` +
+                            (comments ? `&comments=${encodeURIComponent(comments)}` : '');
+                const res    = await fetch(url, { method: 'PUT' });
+                const result = await res.json();
+
+                if (res.ok) {
+                    msgEl.style.color = '#059669';
+                    msgEl.textContent = `✅ Marks submitted (${total}/100)!`;
+                    setTimeout(() => { closeGrading(); loadRequests(); }, 1600);
+                } else {
+                    msgEl.style.color = '#dc2626';
+                    msgEl.textContent = '❌ ' + (result.message || 'Failed to submit marks.');
+                }
+            } catch (err) {
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = '❌ Network error. Please try again.';
             }
         }
 

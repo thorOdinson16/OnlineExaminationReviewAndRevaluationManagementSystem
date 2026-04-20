@@ -7,11 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Poppins', sans-serif;
@@ -26,7 +22,7 @@
         .container {
             background: white;
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             width: 550px;
             max-width: 100%;
             overflow: hidden;
@@ -34,32 +30,29 @@
         }
 
         @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        .header {
+        .page-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 30px;
             text-align: center;
             color: white;
         }
+        .page-header h2 { font-size: 28px; font-weight: 600; margin-bottom: 8px; }
+        .page-header p  { font-size: 14px; opacity: 0.9; }
 
-        .header h2 {
-            font-size: 28px;
+        /* Payment type badge */
+        .type-badge {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
             font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .header p {
-            font-size: 14px;
-            opacity: 0.9;
+            background: rgba(255,255,255,0.25);
+            color: white;
         }
 
         .payment-info {
@@ -76,21 +69,11 @@
             color: #667eea;
             margin: 10px 0;
         }
+        .amount small { font-size: 16px; font-weight: normal; color: #666; }
 
-        .amount small {
-            font-size: 16px;
-            font-weight: normal;
-            color: #666;
-        }
+        .description { color: #666; font-size: 14px; line-height: 1.7; }
 
-        .description {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .form-container {
-            padding: 0 30px 30px;
-        }
+        .form-container { padding: 0 30px 30px; }
 
         .card-details {
             background: #f8f9fa;
@@ -98,7 +81,6 @@
             padding: 20px;
             margin-bottom: 20px;
         }
-
         .card-details h3 {
             color: #333;
             margin-bottom: 20px;
@@ -107,16 +89,9 @@
             align-items: center;
             gap: 10px;
         }
+        .card-details h3 i { color: #667eea; }
 
-        .card-details h3 i {
-            color: #667eea;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-            position: relative;
-        }
-
+        .form-group { margin-bottom: 20px; position: relative; }
         .form-group label {
             display: block;
             margin-bottom: 8px;
@@ -124,15 +99,13 @@
             font-weight: 500;
             font-size: 14px;
         }
-
-        .form-group i {
+        .form-group .icon {
             position: absolute;
             left: 15px;
             top: 40px;
             color: #999;
             transition: all 0.3s ease;
         }
-
         .form-group input {
             width: 100%;
             padding: 12px 15px 12px 45px;
@@ -142,22 +115,13 @@
             font-family: 'Poppins', sans-serif;
             transition: all 0.3s ease;
         }
-
         .form-group input:focus {
             outline: none;
             border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
         }
 
-        .form-group input:focus + i {
-            color: #667eea;
-        }
-
-        .card-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
+        .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
         button {
             width: 100%;
@@ -176,272 +140,238 @@
             justify-content: center;
             gap: 10px;
         }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102,126,234,0.3); }
+        button:active { transform: translateY(0); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
         .message {
-            margin-top: 20px;
+            margin-top: 16px;
             padding: 12px;
             border-radius: 10px;
             font-size: 14px;
             text-align: center;
             display: none;
-            animation: fadeIn 0.3s ease;
         }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .message.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            display: block;
-        }
-
-        .message.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            display: block;
-        }
-
-        .message.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-            display: block;
-        }
+        .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+        .message.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+        .message.info    { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; display: block; }
 
         .footer {
             text-align: center;
             padding: 20px 30px 30px;
             border-top: 1px solid #e0e0e0;
         }
-
         .footer a {
             color: #667eea;
             text-decoration: none;
             font-weight: 500;
-            transition: color 0.3s ease;
         }
-
-        .footer a:hover {
-            color: #764ba2;
-            text-decoration: underline;
-        }
+        .footer a:hover { color: #764ba2; text-decoration: underline; }
 
         .loader {
             display: inline-block;
-            width: 20px;
-            height: 20px;
+            width: 20px; height: 20px;
             border: 3px solid rgba(255,255,255,.3);
             border-radius: 50%;
             border-top-color: white;
             animation: spin 1s ease-in-out infinite;
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (max-width: 480px) {
-            .form-container {
-                padding: 0 20px 20px;
-            }
-            
-            .card-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .amount {
-                font-size: 28px;
-            }
+            .form-container { padding: 0 20px 20px; }
+            .card-row { grid-template-columns: 1fr; }
+            .amount { font-size: 28px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <div class="page-header">
             <h2><i class="fas fa-credit-card"></i> Secure Payment</h2>
-            <p>Complete your payment to submit review request</p>
+            <p id="headerSubtitle">Complete your payment to submit your request</p>
+            <span class="type-badge" id="typeBadge">Loading…</span>
         </div>
-        
+
         <div class="payment-info" id="paymentInfo">
-            <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #667eea;"></i>
+            <i class="fas fa-spinner fa-spin" style="font-size:24px;color:#667eea;"></i>
             <p>Loading payment details...</p>
         </div>
-        
+
         <div class="form-container">
             <div class="card-details">
                 <h3><i class="fas fa-credit-card"></i> Card Details</h3>
                 <div class="form-group">
                     <label>Card Number</label>
                     <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
-                    <i class="fas fa-credit-card"></i>
+                    <i class="fas fa-credit-card icon"></i>
                 </div>
                 <div class="card-row">
                     <div class="form-group">
                         <label>Expiry Date</label>
                         <input type="text" id="expiry" placeholder="MM/YY" maxlength="5">
-                        <i class="fas fa-calendar-alt"></i>
+                        <i class="fas fa-calendar-alt icon"></i>
                     </div>
                     <div class="form-group">
                         <label>CVV</label>
                         <input type="password" id="cvv" placeholder="123" maxlength="4">
-                        <i class="fas fa-lock"></i>
+                        <i class="fas fa-lock icon"></i>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Cardholder Name</label>
                     <input type="text" id="cardholderName" placeholder="Name as on card">
-                    <i class="fas fa-user"></i>
+                    <i class="fas fa-user icon"></i>
                 </div>
             </div>
-            
+
             <button id="payButton" onclick="processPayment()">
-                <i class="fas fa-lock"></i>
-                Pay Now
+                <i class="fas fa-lock"></i> Pay Now
             </button>
-            <div id="message"></div>
+            <div id="message" class="message"></div>
         </div>
-        
+
         <div class="footer">
             <p><i class="fas fa-shield-alt"></i> Secured by SSL Encryption</p>
-            <p style="margin-top: 10px;"><a href="/student/dashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a></p>
+            <p style="margin-top:10px;">
+                <a href="/student/dashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+            </p>
         </div>
     </div>
 
     <script>
-        const reviewId = new URLSearchParams(window.location.search).get('reviewId');
-        
-        if (!reviewId) {
+        const params       = new URLSearchParams(window.location.search);
+        const reviewId     = params.get('reviewId');
+        const revaluationId = params.get('revaluationId');
+
+        // If neither id is present, redirect to dashboard
+        if (!reviewId && !revaluationId) {
             window.location.href = '/student/dashboard';
         }
-        
-        // Format card number with spaces
+
+        const isRevaluation = !!revaluationId;
+
+        // Update header badge
+        document.getElementById('typeBadge').textContent     = isRevaluation ? '♻ Revaluation' : '📋 Review';
+        document.getElementById('headerSubtitle').textContent = isRevaluation
+            ? 'Complete payment to submit your revaluation request'
+            : 'Complete payment to submit your review request';
+
+        // ── Card number formatter ──────────────────────────────────────────────
         document.getElementById('cardNumber').addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\s/g, '');
-            if (value.length > 16) value = value.slice(0, 16);
-            value = value.replace(/(\d{4})/g, '$1 ').trim();
-            e.target.value = value;
+            let v = e.target.value.replace(/\s/g, '');
+            if (v.length > 16) v = v.slice(0, 16);
+            v = v.replace(/(\d{4})/g, '$1 ').trim();
+            e.target.value = v;
         });
-        
-        // Format expiry date
+
+        // ── Expiry formatter ──────────────────────────────────────────────────
         document.getElementById('expiry').addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\//g, '');
-            if (value.length >= 2) {
-                value = value.slice(0, 2) + '/' + value.slice(2, 4);
-            }
-            e.target.value = value;
+            let v = e.target.value.replace(/\//g, '');
+            if (v.length >= 2) v = v.slice(0, 2) + '/' + v.slice(2, 4);
+            e.target.value = v;
         });
-        
+
+        // ── Load payment info ─────────────────────────────────────────────────
         async function loadPaymentInfo() {
             try {
-                const response = await fetch(`/student/review/${reviewId}`);
-                const data = await response.json();
-                
+                let fee, label;
+
+                if (isRevaluation) {
+                    const res  = await fetch(`/student/revaluation/${revaluationId}`);
+                    const data = await res.json();
+                    fee   = data.revaluationFee || 1500;
+                    label = `Revaluation Request #${revaluationId}`;
+                } else {
+                    const res  = await fetch(`/student/review/${reviewId}`);
+                    const data = await res.json();
+                    fee   = data.reviewFee || 500;
+                    label = `Review Request #${reviewId}`;
+                }
+
                 document.getElementById('paymentInfo').innerHTML = `
-                    <i class="fas fa-receipt" style="font-size: 32px; color: #667eea;"></i>
-                    <div class="amount">₹${data.reviewFee || 500}.00 <small>INR</small></div>
+                    <i class="fas fa-receipt" style="font-size:32px;color:#667eea;"></i>
+                    <div class="amount">₹${fee}.00 <small>INR</small></div>
                     <div class="description">
-                        <i class="fas fa-file-alt"></i> Review Request #${reviewId}<br>
-                        <i class="fas fa-graduation-cap"></i> Paper Review Service
+                        <i class="fas fa-file-alt"></i> ${label}<br>
+                        <i class="fas fa-graduation-cap"></i> ${isRevaluation ? 'Paper Revaluation Service' : 'Paper Review Service'}
                     </div>
                 `;
-            } catch (error) {
+            } catch {
                 document.getElementById('paymentInfo').innerHTML = `
-                    <i class="fas fa-exclamation-triangle" style="font-size: 32px; color: #f39c12;"></i>
-                    <div class="amount">₹500.00 <small>INR</small></div>
-                    <div class="description">Paper Review Service</div>
+                    <i class="fas fa-exclamation-triangle" style="font-size:32px;color:#f39c12;"></i>
+                    <div class="amount">₹${isRevaluation ? '1500' : '500'}.00 <small>INR</small></div>
+                    <div class="description">${isRevaluation ? 'Paper Revaluation Service' : 'Paper Review Service'}</div>
                 `;
             }
         }
-        
+
+        // ── Process payment ───────────────────────────────────────────────────
         async function processPayment() {
-            const cardNumber = document.getElementById('cardNumber').value.replace(/\s/g, '');
-            const expiry = document.getElementById('expiry').value;
-            const cvv = document.getElementById('cvv').value;
+            const cardNumber     = document.getElementById('cardNumber').value.replace(/\s/g, '');
+            const expiry         = document.getElementById('expiry').value;
+            const cvv            = document.getElementById('cvv').value;
             const cardholderName = document.getElementById('cardholderName').value;
-            
+            const msgEl          = document.getElementById('message');
+
+            // Validation
             if (!cardNumber || !expiry || !cvv || !cardholderName) {
-                showMessage('Please fill all card details', 'error');
-                return;
+                showMessage('Please fill all card details', 'error'); return;
             }
-            
             if (cardNumber.length !== 16) {
-                showMessage('Please enter a valid 16-digit card number', 'error');
-                return;
+                showMessage('Please enter a valid 16-digit card number', 'error'); return;
             }
-            
             if (!/^\d{2}\/\d{2}$/.test(expiry)) {
-                showMessage('Please enter expiry date in MM/YY format', 'error');
-                return;
+                showMessage('Please enter expiry date in MM/YY format', 'error'); return;
             }
-            
             if (cvv.length < 3) {
-                showMessage('Please enter a valid CVV', 'error');
-                return;
+                showMessage('Please enter a valid CVV', 'error'); return;
             }
-            
+
             const payButton = document.getElementById('payButton');
-            const originalText = payButton.innerHTML;
+            const origHtml  = payButton.innerHTML;
             payButton.innerHTML = '<span class="loader"></span> Processing...';
-            payButton.disabled = true;
-            
+            payButton.disabled  = true;
+
             try {
-                const response = await fetch(`/student/review/${reviewId}/pay`, {
-                    method: 'POST'
-                });
-                
-                const result = await response.json();
-                
+                // Choose endpoint based on payment type
+                const endpoint = isRevaluation
+                    ? `/student/revaluation/${revaluationId}/pay`
+                    : `/student/review/${reviewId}/pay`;
+
+                const response = await fetch(endpoint, { method: 'POST' });
+                const result   = await response.json();
+
                 if (response.ok) {
-                    showMessage('✅ Payment successful! Your review request has been submitted. Redirecting...', 'success');
+                    showMessage(
+                        isRevaluation
+                            ? '✅ Payment successful! Your revaluation request is now in progress. Redirecting…'
+                            : '✅ Payment successful! Your review request has been submitted. Redirecting…',
+                        'success'
+                    );
                     setTimeout(() => {
-                        window.location.href = '/student/dashboard';
+                        window.location.href = isRevaluation
+                            ? '/student/revaluation-status'
+                            : '/student/dashboard';
                     }, 2000);
                 } else {
-                    showMessage('❌ Payment failed. Please try again.', 'error');
-                    payButton.innerHTML = originalText;
-                    payButton.disabled = false;
+                    showMessage('❌ ' + (result.message || 'Payment failed. Please try again.'), 'error');
+                    payButton.innerHTML = origHtml;
+                    payButton.disabled  = false;
                 }
-            } catch (error) {
+            } catch {
                 showMessage('❌ Payment processing error. Please try again.', 'error');
-                payButton.innerHTML = originalText;
-                payButton.disabled = false;
+                payButton.innerHTML = origHtml;
+                payButton.disabled  = false;
             }
         }
-        
-        function showMessage(message, type) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerHTML = `<div class="message ${type}">${message}</div>`;
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, 5000);
+
+        function showMessage(text, type) {
+            const el = document.getElementById('message');
+            el.textContent  = text;
+            el.className    = `message ${type}`;
         }
-        
+
         loadPaymentInfo();
     </script>
 </body>

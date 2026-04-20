@@ -19,13 +19,9 @@ import java.util.Set;
  *   RevaluationRequested → RevaluationPaymentPending → RevaluationInProgress
  *   RevaluationInProgress → RevaluationCompleted → FinalResultUpdated → Finalized
  *
- * FIX: Added FINAL_RESULT_UPDATED → FINALIZED (was missing, broke the finalize flow).
- * FIX: Removed EVALUATED → FINALIZED shortcut (no such path in §6; admin must publish first).
- *
- * PATTERN EXPLANATION for report:
- *   - All service-layer status changes MUST route through this class.
- *   - Illegal transitions throw InvalidStateTransitionException.
- *   - No service class calls script.setStatus() directly.
+ * FIX: Added RESULTS_PUBLISHED → REVALUATION_REQUESTED to support direct revaluation
+ *      when a student skips the review step (common flow when script is in RESULTS_PUBLISHED).
+ * FIX: Added EVALUATED → REVALUATION_REQUESTED for the same reason.
  */
 public class AnswerScriptStateMachine {
 
@@ -49,18 +45,23 @@ public class AnswerScriptStateMachine {
         allow("AWAIT_STUDENT_DECISION",      "FINALIZED");               // student accepts
         allow("AWAIT_STUDENT_DECISION",      "REVALUATION_REQUESTED");   // student escalates
 
+        // ── Direct revaluation (skipping review) ──────────────────────────────
+        // FIX: Student applies for revaluation directly from RESULTS_PUBLISHED
+        //      without going through the review workflow first.
+        allow("RESULTS_PUBLISHED",           "REVALUATION_REQUESTED");
+        allow("EVALUATED",                   "REVALUATION_REQUESTED");
+
         // ── Revaluation flow (§6 rows 11-15) ─────────────────────────────────
         allow("REVALUATION_REQUESTED",       "REVALUATION_PAYMENT_PENDING");
         allow("REVALUATION_PAYMENT_PENDING", "REVALUATION_IN_PROGRESS");
         allow("REVALUATION_IN_PROGRESS",     "REVALUATION_COMPLETED");
-        allow("REVALUATION_COMPLETED",       "FINAL_RESULT_UPDATED");    // FIX: was missing
-        allow("FINAL_RESULT_UPDATED",        "FINALIZED");               // FIX: was missing
+        allow("REVALUATION_COMPLETED",       "FINAL_RESULT_UPDATED");
+        allow("FINAL_RESULT_UPDATED",        "FINALIZED");
 
         // ── Admin convenience shortcuts ───────────────────────────────────────
-        // Admin may finalize directly from published / review-complete states
         allow("RESULTS_PUBLISHED",           "FINALIZED");
         allow("REVIEW_COMPLETED",            "FINALIZED");
-        allow("REVALUATION_COMPLETED",       "FINALIZED");   // direct shortcut if needed
+        allow("REVALUATION_COMPLETED",       "FINALIZED");
 
         // ── Rejection paths ───────────────────────────────────────────────────
         allow("REVIEW_REQUESTED",            "REJECTED");

@@ -303,35 +303,34 @@ public class RevaluationService implements IRevaluationService {
 
     // ==================== ADMIN ASSIGN ====================
 
-    @Transactional
     @Override
+    @Transactional
     public Map<String, Object> assignRevaluatorToRequest(Long revaluationId, Long revaluatorId) {
         RevaluationRequest request = revaluationRepo.findById(revaluationId)
                 .orElseThrow(() -> new RuntimeException("Revaluation request not found"));
- 
-        // FIX: Accept REVALUATION_IN_PROGRESS (the state payment transitions to).
-        // "VERIFIED" is not a valid revaluation state — removed that incorrect check.
+
+        // Accept REVALUATION_IN_PROGRESS (the state payment transitions to).
         String currentStatus = request.getRevaluationStatus();
         if (!"REVALUATION_IN_PROGRESS".equals(currentStatus)) {
             throw new RuntimeException(
                 "Cannot assign revaluator. Request must be in REVALUATION_IN_PROGRESS. Current: "
                     + currentStatus);
         }
- 
-        User user = userRepository.findById(revaluatorId)
-                .orElseThrow(() -> new RuntimeException("Revaluator not found"));
- 
-        if (!"REVALUATOR".equals(user.getRole())) {
-            throw new RuntimeException("User is not a revaluator");
-        }
- 
-        Revaluator revaluator = (Revaluator) user;
+
+        // FIX: Use typed query to avoid ClassCastException.
+        // userRepository.findById() returns a User proxy which cannot be cast to Revaluator
+        // even when the underlying row is a Revaluator. The typed JPQL query returns the
+        // concrete Revaluator entity directly.
+        Revaluator revaluator = userRepository.findRevaluatorById(revaluatorId)
+                .orElseThrow(() -> new RuntimeException(
+                    "No revaluator found with id: " + revaluatorId));
+
         request.setRevaluator(revaluator);
         RevaluationRequest updatedRequest = revaluationRepo.save(request);
- 
+
         notificationService.notifyStudent(request.getStudent(),
             "Revaluation request #" + revaluationId + " assigned to revaluator: " + revaluator.getName());
- 
+
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Revaluator assigned successfully");
         response.put("revaluationId", revaluationId);

@@ -124,62 +124,167 @@
             transition: all 0.3s;
         }
         button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(127,83,172,0.35); }
-        button.danger { background: #ef4444; }
         button.secondary { background: #94a3b8; }
 
         .empty-state { text-align: center; padding: 40px; color: #94a3b8; }
         .empty-state i { font-size: 44px; margin-bottom: 12px; display: block; }
 
-        /* Submit Marks Modal */
-        .modal {
+        /* ── Grading Overlay ────────────────────────────────────────────────── */
+        .grading-overlay {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
+            background: rgba(15,23,42,0.75);
+            z-index: 2000;
+            align-items: stretch;
+        }
+        .grading-overlay.open { display: flex; }
+
+        .pdf-panel {
+            flex: 1 1 60%;
+            background: #1e293b;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .pdf-panel-header {
+            background: #0f172a;
+            padding: 14px 20px;
+            display: flex;
             align-items: center;
-            z-index: 1000;
+            gap: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
         }
-        .modal.open { display: flex; }
-        .modal-box {
+        .pdf-panel-header i { color: #a78bfa; }
+        .pdf-iframe-wrap { flex: 1; overflow: hidden; }
+        .pdf-iframe-wrap iframe { width: 100%; height: 100%; border: none; }
+        .pdf-placeholder {
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: #94a3b8; gap: 16px;
+        }
+        .pdf-placeholder i { font-size: 72px; color: #334155; }
+        .pdf-placeholder p { font-size: 15px; }
+        .pdf-placeholder small { font-size: 12px; color: #475569; }
+
+        .grade-panel {
+            width: 440px;
+            flex-shrink: 0;
             background: white;
-            padding: 32px;
-            border-radius: 20px;
-            width: 420px;
-            max-width: 95%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: -4px 0 24px rgba(0,0,0,0.25);
         }
-        .modal-box h3 { font-size: 20px; color: #1e293b; margin-bottom: 20px; }
-        .modal-box label { display: block; font-weight: 600; font-size: 13px; color: #475569; margin-bottom: 6px; }
-        .modal-box input, .modal-box textarea {
-            width: 100%;
+        .grade-panel-header {
+            background: linear-gradient(135deg, #7f53ac 0%, #647dee 100%);
+            padding: 18px 22px;
+            color: white;
+        }
+        .grade-panel-header h3 { font-size: 18px; font-weight: 600; }
+        .grade-panel-header p  { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+
+        .grade-panel-body { flex: 1; overflow-y: auto; padding: 20px; }
+
+        /* Info strip showing original marks */
+        .orig-strip {
+            background: #faf5ff;
+            border: 1px solid #e9d5ff;
+            border-radius: 10px;
             padding: 10px 14px;
+            margin-bottom: 14px;
+            font-size: 13px;
+            color: #6b21a8;
+        }
+        .orig-strip strong { color: #4c1d95; }
+
+        .total-strip {
+            background: #faf5ff;
+            border: 2px solid #7f53ac;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .total-strip span { font-size: 13px; color: #475569; font-weight: 500; }
+        .total-val { font-size: 28px; font-weight: 700; color: #7f53ac; }
+        .total-val small { font-size: 14px; color: #64748b; font-weight: 400; }
+
+        .q-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .q-row:last-child { border-bottom: none; }
+        .q-label { width: 80px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: #7f53ac; }
+        .q-slider-wrap { flex: 1; }
+        .q-slider {
+            width: 100%;
+            -webkit-appearance: none; appearance: none;
+            height: 6px; border-radius: 3px;
+            background: #e2e8f0; outline: none; cursor: pointer;
+        }
+        .q-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #7f53ac; cursor: pointer;
+            box-shadow: 0 1px 4px rgba(127,83,172,0.4);
+        }
+        .q-slider::-moz-range-thumb {
+            width: 18px; height: 18px;
+            border-radius: 50%; background: #7f53ac;
+            cursor: pointer; border: none;
+        }
+        .q-input {
+            width: 56px; padding: 6px 8px;
+            border: 2px solid #e2e8f0; border-radius: 8px;
+            font-size: 14px; font-weight: 600;
+            text-align: center; color: #7f53ac;
+            font-family: 'Poppins', sans-serif;
+        }
+        .q-input:focus { outline: none; border-color: #7f53ac; }
+        .q-input.over  { border-color: #dc2626; color: #dc2626; }
+        .q-max { font-size: 11px; color: #94a3b8; flex-shrink: 0; }
+
+        .comments-wrap { margin-top: 16px; }
+        .comments-wrap label { display: block; font-size: 13px; font-weight: 600; color: #7f53ac; margin-bottom: 6px; }
+        .comments-wrap textarea {
+            width: 100%;
+            padding: 10px 12px;
             border: 2px solid #e2e8f0;
             border-radius: 10px;
-            font-size: 14px;
-            font-family: 'Poppins', sans-serif;
-            margin-bottom: 16px;
-            transition: border-color 0.2s;
-        }
-        .modal-box input:focus, .modal-box textarea:focus {
-            outline: none;
-            border-color: #7f53ac;
-        }
-        .modal-box textarea { resize: vertical; min-height: 80px; }
-        .modal-meta { background: #f8fafc; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #475569; }
-        .modal-meta span { font-weight: 600; color: #1e293b; }
-        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-
-        .alert {
-            padding: 12px 16px;
-            border-radius: 10px;
             font-size: 13px;
-            font-weight: 500;
-            margin-top: 12px;
-            display: none;
+            font-family: 'Poppins', sans-serif;
+            resize: vertical;
+            min-height: 70px;
         }
-        .alert.success { background: #d1fae5; color: #065f46; display: block; }
-        .alert.error   { background: #fee2e2; color: #991b1b; display: block; }
+        .comments-wrap textarea:focus { outline: none; border-color: #7f53ac; }
+
+        .grade-panel-footer {
+            padding: 16px 20px;
+            border-top: 2px solid #e2e8f0;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .grade-panel-footer .submit-btn {
+            width: 100%; padding: 12px;
+            font-size: 15px; font-weight: 600; border-radius: 10px;
+        }
+        .grade-msg { font-size: 12px; text-align: center; min-height: 16px; }
+
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .grading-overlay.open { flex-direction: column; }
+            .pdf-panel { flex: 0 0 40vh; }
+            .grade-panel { width: 100%; flex: 1; }
+        }
     </style>
 </head>
 <body>
@@ -202,7 +307,6 @@
 </div>
 
 <div class="container">
-
     <div class="stats-grid">
         <div class="stat-card">
             <i class="fas fa-hourglass-half"></i>
@@ -216,57 +320,74 @@
         </div>
     </div>
 
-    <!-- Pending Revaluations -->
     <div id="pending" class="section">
         <h2><i class="fas fa-tasks"></i> Pending Revaluation Requests</h2>
         <div id="pendingList"></div>
     </div>
 
-    <!-- Completed Revaluations -->
     <div id="completed" class="section" style="display:none;">
         <h2><i class="fas fa-check-circle"></i> Completed Revaluations</h2>
         <div id="completedList"></div>
     </div>
-
 </div>
 
-<!-- Submit Marks Modal -->
-<div class="modal" id="submitModal">
-    <div class="modal-box">
-        <h3><i class="fas fa-edit" style="color:#7f53ac;margin-right:8px;"></i>Submit Revaluation Marks</h3>
+<!-- ── Grading Overlay ──────────────────────────────────────────────────── -->
+<div id="gradingOverlay" class="grading-overlay">
 
-        <div class="modal-meta">
-            Request <span>#<span id="modalReqId">—</span></span> &nbsp;·&nbsp;
-            Student: <span id="modalStudent">—</span><br>
-            Subject: <span id="modalSubject">—</span> &nbsp;·&nbsp;
-            Original Marks: <span id="modalOrigMarks">—</span>
+    <div class="pdf-panel">
+        <div class="pdf-panel-header">
+            <i class="fas fa-file-pdf"></i>
+            <span>Answer Script — Request&nbsp;#<span id="pdfRequestId"></span></span>
+        </div>
+        <div class="pdf-iframe-wrap" id="pdfIframeWrap"></div>
+    </div>
+
+    <div class="grade-panel">
+        <div class="grade-panel-header">
+            <h3><i class="fas fa-pen-nib"></i> Re-Grade Paper</h3>
+            <p>Request&nbsp;#<span id="gradeRequestId"></span> — each question out of&nbsp;10</p>
         </div>
 
-        <label for="newMarks">New Marks <span style="color:#ef4444;">*</span></label>
-        <input type="number" id="newMarks" step="0.5" min="0" placeholder="e.g. 72.5">
+        <div class="grade-panel-body">
+            <div class="orig-strip" id="origStrip"></div>
 
-        <label for="comments">Comments (optional)</label>
-        <textarea id="comments" placeholder="Any observations about the revaluation..."></textarea>
+            <div class="total-strip">
+                <span><i class="fas fa-sigma"></i> New Total</span>
+                <div>
+                    <span class="total-val" id="totalDisplay">0</span>
+                    <span class="total-val"><small> / 100</small></span>
+                </div>
+            </div>
 
-        <div class="modal-actions">
-            <button class="secondary" onclick="closeModal()">Cancel</button>
-            <button onclick="confirmSubmit()"><i class="fas fa-paper-plane"></i> Submit</button>
+            <div id="questionRows"></div>
+
+            <div class="comments-wrap">
+                <label><i class="fas fa-comment-alt"></i> Comments (optional)</label>
+                <textarea id="commentsInput" placeholder="Add remarks about the revaluation…"></textarea>
+            </div>
         </div>
 
-        <div class="alert" id="modalAlert"></div>
+        <div class="grade-panel-footer">
+            <div class="grade-msg" id="gradeMsg"></div>
+            <button class="submit-btn" onclick="confirmSubmitMarks()">
+                <i class="fas fa-paper-plane"></i> Submit Marks
+            </button>
+            <button class="secondary" onclick="closeGrading()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
     </div>
 </div>
 
 <script>
     const revaluatorId = localStorage.getItem('userId');
     if (!revaluatorId) window.location.href = '/login';
-
-    document.getElementById('revaluatorName').textContent =
-        localStorage.getItem('userName') || 'Revaluator';
+    document.getElementById('revaluatorName').textContent = localStorage.getItem('userName') || 'Revaluator';
 
     let currentRequestId = null;
+    const Q_COUNT = 10, Q_MAX = 10;
 
-    // ── Section toggle ───────────────────────────────────────────────────────
+    // ── Section toggle ─────────────────────────────────────────────────────────
     function showSection(name) {
         ['pending', 'completed'].forEach(s => {
             document.getElementById(s).style.display = 'none';
@@ -278,31 +399,25 @@
         if (name === 'completed') loadCompleted();
     }
 
-    // ── Load pending (REVALUATION_IN_PROGRESS) ───────────────────────────────
+    // ── Load pending ───────────────────────────────────────────────────────────
     async function loadPending() {
         const container = document.getElementById('pendingList');
         container.innerHTML = '<p style="color:#94a3b8;font-size:14px;">Loading...</p>';
         try {
             const res  = await fetch('/revaluator/requests');
             const data = await res.json();
-
             document.getElementById('statPending').textContent = data.length;
 
             if (!data.length) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <p>No pending revaluation requests assigned to you.</p>
-                    </div>`;
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>No pending revaluation requests assigned to you.</p></div>`;
                 return;
             }
 
-            let html = `<table>
-                <thead><tr>
-                    <th>Request ID</th><th>Student</th><th>Script</th>
-                    <th>Subject</th><th>Original Marks</th><th>Fee</th>
-                    <th>Status</th><th>Action</th>
-                </tr></thead><tbody>`;
+            let html = `<table><thead><tr>
+                <th>Request ID</th><th>Student</th><th>Script</th>
+                <th>Subject</th><th>Original Marks</th><th>Fee</th>
+                <th>Status</th><th>Action</th>
+            </tr></thead><tbody>`;
 
             data.forEach(r => {
                 html += `<tr>
@@ -314,13 +429,15 @@
                     <td>₹${r.revaluationFee ?? 'N/A'}</td>
                     <td><span class="badge badge-progress">In Progress</span></td>
                     <td>
-                        <button onclick="openModal(
+                        <button onclick="openGrading(
                             ${r.revaluationId},
+                            '${r.answerScript?.pdfUrl || ''}',
+                            ${r.answerScript?.scriptId || 'null'},
                             '${(r.student?.name || '').replace(/'/g,"\\'")}',
                             '${(r.answerScript?.exam?.subject || '').replace(/'/g,"\\'")}',
                             ${r.answerScript?.totalMarks ?? 'null'}
                         )">
-                            <i class="fas fa-edit"></i> Submit Marks
+                            <i class="fas fa-pen"></i> Grade Paper
                         </button>
                     </td>
                 </tr>`;
@@ -330,38 +447,28 @@
             container.innerHTML = html;
 
         } catch (e) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Error loading requests. Please refresh.</p>
-                </div>`;
+            container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading requests. Please refresh.</p></div>`;
         }
     }
 
-    // ── Load completed ───────────────────────────────────────────────────────
+    // ── Load completed ─────────────────────────────────────────────────────────
     async function loadCompleted() {
         const container = document.getElementById('completedList');
         container.innerHTML = '<p style="color:#94a3b8;font-size:14px;">Loading...</p>';
         try {
             const res  = await fetch('/revaluator/requests/completed');
             const data = await res.json();
-
             document.getElementById('statCompleted').textContent = data.length;
 
             if (!data.length) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-check-circle"></i>
-                        <p>No completed revaluations yet.</p>
-                    </div>`;
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-check-circle"></i><p>No completed revaluations yet.</p></div>`;
                 return;
             }
 
-            let html = `<table>
-                <thead><tr>
-                    <th>Request ID</th><th>Student</th><th>Script</th>
-                    <th>Subject</th><th>Final Marks</th><th>Status</th>
-                </tr></thead><tbody>`;
+            let html = `<table><thead><tr>
+                <th>Request ID</th><th>Student</th><th>Script</th>
+                <th>Subject</th><th>Final Marks</th><th>Status</th>
+            </tr></thead><tbody>`;
 
             data.forEach(r => {
                 html += `<tr>
@@ -378,66 +485,122 @@
             container.innerHTML = html;
 
         } catch (e) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Error loading completed revaluations.</p>
-                </div>`;
+            container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading completed revaluations.</p></div>`;
         }
     }
 
-    // ── Modal helpers ────────────────────────────────────────────────────────
-    function openModal(requestId, studentName, subject, origMarks) {
-        currentRequestId = requestId;
-        document.getElementById('modalReqId').textContent    = requestId;
-        document.getElementById('modalStudent').textContent  = studentName;
-        document.getElementById('modalSubject').textContent  = subject;
-        document.getElementById('modalOrigMarks').textContent = origMarks !== null ? origMarks : 'N/A';
-        document.getElementById('newMarks').value   = '';
-        document.getElementById('comments').value  = '';
-        document.getElementById('modalAlert').className = 'alert';
-        document.getElementById('modalAlert').textContent  = '';
-        document.getElementById('submitModal').classList.add('open');
+    // ── Grading Overlay ────────────────────────────────────────────────────────
+    function buildQuestionRows() {
+        const container = document.getElementById('questionRows');
+        container.innerHTML = '';
+        for (let i = 1; i <= Q_COUNT; i++) {
+            const row = document.createElement('div');
+            row.className = 'q-row';
+            row.innerHTML = `
+                <div class="q-label">Q&nbsp;${i}</div>
+                <div class="q-slider-wrap">
+                    <input type="range" class="q-slider" id="slider-${i}"
+                           min="0" max="${Q_MAX}" step="0.5" value="0"
+                           oninput="syncFromSlider(${i})">
+                </div>
+                <input type="number" class="q-input" id="input-${i}"
+                       min="0" max="${Q_MAX}" step="0.5" value="0"
+                       oninput="syncFromInput(${i})">
+                <div class="q-max">/ ${Q_MAX}</div>
+            `;
+            container.appendChild(row);
+        }
     }
 
-    function closeModal() {
-        document.getElementById('submitModal').classList.remove('open');
+    function syncFromSlider(i) {
+        document.getElementById(`input-${i}`).value = document.getElementById(`slider-${i}`).value;
+        updateTotal();
+    }
+    function syncFromInput(i) {
+        let val = parseFloat(document.getElementById(`input-${i}`).value);
+        const el = document.getElementById(`input-${i}`);
+        if (isNaN(val) || val < 0) val = 0;
+        if (val > Q_MAX) { el.classList.add('over'); }
+        else { el.classList.remove('over'); document.getElementById(`slider-${i}`).value = val; }
+        updateTotal();
+    }
+    function updateTotal() {
+        let sum = 0, hasOver = false;
+        for (let i = 1; i <= Q_COUNT; i++) {
+            const raw = parseFloat(document.getElementById(`input-${i}`).value) || 0;
+            if (raw > Q_MAX) hasOver = true;
+            sum += Math.min(raw, Q_MAX);
+        }
+        const el = document.getElementById('totalDisplay');
+        el.textContent = sum;
+        el.style.color = hasOver ? '#dc2626' : (sum === 100 ? '#059669' : '#7f53ac');
+    }
+
+    function openGrading(requestId, pdfUrl, scriptId, studentName, subject, origMarks) {
+        currentRequestId = requestId;
+        document.getElementById('pdfRequestId').textContent   = requestId;
+        document.getElementById('gradeRequestId').textContent = requestId;
+        document.getElementById('gradeMsg').textContent = '';
+        document.getElementById('commentsInput').value  = '';
+
+        // Original marks info strip
+        document.getElementById('origStrip').innerHTML =
+            `<i class="fas fa-info-circle"></i>&nbsp; <strong>${studentName}</strong> &mdash; ${subject} &nbsp;·&nbsp; Original marks: <strong>${origMarks !== null ? origMarks : 'N/A'}</strong>`;
+
+        buildQuestionRows();
+        updateTotal();
+
+        const wrap = document.getElementById('pdfIframeWrap');
+        wrap.innerHTML = pdfUrl
+            ? `<iframe src="${pdfUrl}"></iframe>`
+            : `<div class="pdf-placeholder">
+                   <i class="fas fa-file-pdf"></i>
+                   <p>Answer Script PDF</p>
+                   <small>Script #${scriptId || '—'} — PDF not attached</small>
+                   <small style="margin-top:8px;color:#334155;">Add a <code>pdfUrl</code> field to <code>AnswerScript</code> to enable in-browser viewing.</small>
+               </div>`;
+
+        document.getElementById('gradingOverlay').classList.add('open');
+    }
+
+    function closeGrading() {
+        document.getElementById('gradingOverlay').classList.remove('open');
         currentRequestId = null;
     }
 
-    async function confirmSubmit() {
-        const marks    = document.getElementById('newMarks').value;
-        const comments = document.getElementById('comments').value.trim();
-        const alertEl  = document.getElementById('modalAlert');
-
-        if (!marks || parseFloat(marks) < 0) {
-            alertEl.textContent = 'Please enter valid marks (≥ 0).';
-            alertEl.className = 'alert error';
-            return;
+    async function confirmSubmitMarks() {
+        const msgEl = document.getElementById('gradeMsg');
+        for (let i = 1; i <= Q_COUNT; i++) {
+            if ((parseFloat(document.getElementById(`input-${i}`).value) || 0) > Q_MAX) {
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = `Q${i} exceeds max ${Q_MAX}. Please correct it.`;
+                return;
+            }
         }
+        let total = 0;
+        for (let i = 1; i <= Q_COUNT; i++) total += parseFloat(document.getElementById(`input-${i}`).value) || 0;
+        total = Math.round(total * 2) / 2;
+
+        const comments = document.getElementById('commentsInput').value.trim();
+        msgEl.style.color = '#7f53ac';
+        msgEl.textContent = 'Submitting…';
 
         try {
-            let url = `/revaluator/requests/${currentRequestId}/submit?marks=${marks}`;
+            let url = `/revaluator/requests/${currentRequestId}/submit?marks=${total}`;
             if (comments) url += `&comments=${encodeURIComponent(comments)}`;
-
             const res    = await fetch(url, { method: 'PUT' });
             const result = await res.json();
-
             if (res.ok) {
-                alertEl.textContent = '✅ Marks submitted successfully!';
-                alertEl.className   = 'alert success';
-                setTimeout(() => {
-                    closeModal();
-                    loadPending();
-                    loadCompleted();
-                }, 1200);
+                msgEl.style.color = '#059669';
+                msgEl.textContent = `✅ Marks submitted (${total}/100)!`;
+                setTimeout(() => { closeGrading(); loadPending(); loadCompleted(); }, 1500);
             } else {
-                alertEl.textContent = '❌ ' + (result.message || 'Submission failed.');
-                alertEl.className   = 'alert error';
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = '❌ ' + (result.message || 'Submission failed.');
             }
-        } catch (e) {
-            alertEl.textContent = '❌ Network error. Please try again.';
-            alertEl.className   = 'alert error';
+        } catch {
+            msgEl.style.color = '#dc2626';
+            msgEl.textContent = '❌ Network error. Please try again.';
         }
     }
 
@@ -447,7 +610,6 @@
         localStorage.removeItem('userName');
     }
 
-    // Initial load
     loadPending();
 </script>
 </body>
