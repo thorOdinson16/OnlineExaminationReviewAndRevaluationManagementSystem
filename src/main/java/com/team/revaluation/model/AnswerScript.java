@@ -19,6 +19,12 @@ public class AnswerScript {
 
     private Float totalMarks;
 
+    private String pdfUrl;
+    
+    public String getPdfUrl() {
+        return "/pdfs/script-" + scriptId + ".pdf";
+    }
+
     @ManyToOne
     @JoinColumn(name = "student_id")
     private Student student;
